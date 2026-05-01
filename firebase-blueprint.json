@@ -1,0 +1,90 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Represents a platform user (Creator, Brand, or Admin).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["creator", "brand", "admin"] },
+        "photoURL": { "type": "string" },
+        "bio": { "type": "string" },
+        "niche": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Campaign": {
+      "title": "Campaign",
+      "description": "A marketing campaign created by a brand.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "brandId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "budget": { "type": "string" },
+        "totalBudget": { "type": "number" },
+        "cpm": { "type": "number" },
+        "category": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "active", "in-progress", "review", "completed"] },
+        "deliverables": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["brandId", "title", "budget", "status"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "A creator's application to a campaign.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "campaignId": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "declined"] },
+        "message": { "type": "string" },
+        "proposedBudget": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["campaignId", "creatorId", "status"]
+    },
+    "Wallet": {
+      "title": "Wallet",
+      "description": "User's financial record for earnings and payments.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "balance": { "type": "number" },
+        "totalEarned": { "type": "number" },
+        "totalSpent": { "type": "number" },
+        "currency": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "balance"]
+    },
+    "Withdrawal": {
+      "title": "Withdrawal",
+      "description": "A request to withdraw funds from the wallet.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "method": { "type": "string", "enum": ["upi", "bank"] },
+        "details": { "type": "object" },
+        "status": { "type": "string", "enum": ["pending", "processing", "completed", "failed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "amount", "method", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "Global user profiles" },
+    "/users/{userId}/wallet/balance": { "schema": "Wallet", "description": "User wallet details" },
+    "/users/{userId}/withdrawals/{withdrawalId}": { "schema": "Withdrawal", "description": "Financial withdrawal records" },
+    "/campaigns/{campaignId}": { "schema": "Campaign", "description": "Campaign listings" },
+    "/campaigns/{campaignId}/applications/{applicationId}": { "schema": "Application", "description": "Applications for a specific campaign" }
+  }
+}

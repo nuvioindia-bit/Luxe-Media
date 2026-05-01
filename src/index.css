@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+  
+  --color-brand-primary: #3B82F6;
+  --color-brand-secondary: #6366F1;
+  --color-brand-accent: #F43F5E;
+}
+
+@layer base {
+  body {
+    @apply bg-[#F8F9FA] text-[#1A1A1A] antialiased min-h-screen selection:bg-brand-primary/10;
+  }
+}
+
+@layer components {
+  .premium-card {
+    @apply bg-white rounded-xl p-3 shadow-[0_4px_15px_rgb(0,0,0,0.02)] border border-gray-100/50 hover:shadow-[0_8px_25px_rgb(0,0,0,0.05)] transition-all duration-300;
+  }
+  
+  .premium-button-primary {
+    @apply relative overflow-hidden bg-brand-primary text-white font-semibold px-3.5 py-2 rounded-lg shadow-md shadow-brand-primary/10 hover:shadow-lg hover:shadow-brand-primary/20 transition-all duration-300 active:scale-[0.98] text-[12px];
+  }
+
+  .premium-button-secondary {
+    @apply bg-white text-[#1A1A1A] font-semibold px-3.5 py-2 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-300 active:scale-[0.98] text-[12px];
+  }
+
+  .glass-nav {
+    @apply bg-white/80 backdrop-blur-xl border-t border-gray-100;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-tr from-brand-primary to-brand-secondary bg-clip-text text-transparent;
+  }
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
