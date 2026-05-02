@@ -83,8 +83,11 @@
   "firestore": {
     "/users/{userId}": { "schema": "User", "description": "Global user profiles" },
     "/users/{userId}/wallet/balance": { "schema": "Wallet", "description": "User wallet details" },
-    "/users/{userId}/withdrawals/{withdrawalId}": { "schema": "Withdrawal", "description": "Financial withdrawal records" },
+    "/users/{userId}/transactions/{transactionId}": { "schema": "object", "description": "User transaction history" },
     "/campaigns/{campaignId}": { "schema": "Campaign", "description": "Campaign listings" },
-    "/campaigns/{campaignId}/applications/{applicationId}": { "schema": "Application", "description": "Applications for a specific campaign" }
+    "/applications/{applicationId}": { "schema": "Application", "description": "Global applications collection" },
+    "/withdrawals/{withdrawalId}": { "schema": "Withdrawal", "description": "Global withdrawal requests" },
+    "/notifications/{notificationId}": { "schema": "object", "description": "System notifications" },
+    "/app_config/main": { "schema": "object", "description": "Global platform settings" }
   }
 }

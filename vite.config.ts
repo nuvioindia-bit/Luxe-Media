@@ -4,15 +4,13 @@ import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
 
 export default defineConfig(({mode}) => {
-  // Isse Netlify ke saare variables load ho jayenge
-  const env = loadEnv(mode, process.cwd(), '');
-  
+  const env = loadEnv(mode, '.', '');
   return {
     plugins: [react(), tailwindcss()],
     base: '/',
     define: {
-      // Ye line zaroori hai taaki Gemini aur Firebase dono chalein
       'process.env': env,
+      'global': 'window',
     },
     resolve: {
       alias: {
@@ -20,13 +18,9 @@ export default defineConfig(({mode}) => {
       },
     },
     server: {
+      // HMR is disabled in AI Studio via DISABLE_HMR env var.
+      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-    },
-    build: {
-      rollupOptions: {
-        // Express backend ko build se bahar rakhne ke liye
-        external: ['express'],
-      },
     },
   };
 });

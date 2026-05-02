@@ -1,6 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let genAI: GoogleGenAI | null = null;
+
+function getAI() {
+  if (!genAI) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is not defined in environment variables");
+    }
+    genAI = new GoogleGenAI({ apiKey });
+  }
+  return genAI;
+}
 
 export async function askAIPilot(prompt: string, context?: any) {
   const model = "gemini-3-flash-preview";
@@ -25,6 +36,7 @@ export async function askAIPilot(prompt: string, context?: any) {
   If the user asks something irrelevant to influencer marketing, politely steer them back to Rexocollab topics.`;
 
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: model,
       contents: prompt,
@@ -34,10 +46,10 @@ export async function askAIPilot(prompt: string, context?: any) {
       },
     });
 
-    return response.text;
+    return response.text || "I was unable to generate a response.";
   } catch (error) {
     console.error("AI Pilot Error:", error);
-    return "I encountered an error while processing your request. Please try again later.";
+    return "I encountered an error while processing your request. Please try again later. Make sure the GEMINI_API_KEY is configured correctly.";
   }
 }
 
@@ -53,6 +65,7 @@ export async function* streamAIPilot(prompt: string, context?: any) {
     Keep responses concise, professional, and actionable. Use markdown for better readability.`;
 
     try {
+        const ai = getAI();
         const streamResponse = await ai.models.generateContentStream({
             model: model,
             contents: prompt,
@@ -66,6 +79,6 @@ export async function* streamAIPilot(prompt: string, context?: any) {
         }
     } catch (error) {
         console.error("AI Pilot Stream Error:", error);
-        yield "An error occurred during streaming.";
+        yield "An error occurred during streaming. Please verify API key.";
     }
 }

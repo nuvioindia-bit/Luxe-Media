@@ -153,7 +153,7 @@ export default function CreatorHome() {
               >
                 <img src={campaign.image || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=600'} alt={campaign.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-5 flex flex-col justify-end">
-                  <div className="text-[9px] font-bold text-brand-primary uppercase tracking-widest mb-1">{campaign.brand || 'Brand'}</div>
+                  <div className="text-[9px] font-bold text-brand-primary uppercase tracking-widest mb-1">{campaign.brandName || campaign.brand || 'Brand'}</div>
                   <div className="flex justify-between items-end">
                     <h3 className="text-white font-display font-bold text-base leading-tight max-w-[70%]">{campaign.title}</h3>
                     <div className="bg-white px-2 py-1 rounded-lg text-[10px] font-bold text-black shadow-xl">
@@ -195,12 +195,12 @@ export default function CreatorHome() {
                   className={cn("w-9 h-9 rounded-xl flex items-center justify-center font-display font-bold text-white shadow-inner text-xs")}
                   style={{ backgroundColor: item.color || '#4F46E5' }}
                 >
-                  {item.brand?.[0] || 'B'}
+                  {item.brandName?.[0] || item.brand?.[0] || 'B'}
                 </div>
                 <div>
                   <div className="font-bold text-xs text-gray-900 truncate max-w-[150px]">{item.title}</div>
                   <div className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                    {item.brand || 'Brand'} • <span className="text-brand-primary">{item.status}</span>
+                    {item.brandName || item.brand || 'Brand'} • <span className="text-brand-primary">{item.status}</span>
                   </div>
                 </div>
               </div>

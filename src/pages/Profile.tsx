@@ -20,12 +20,16 @@ import {
   Send,
   Linkedin,
   Instagram,
-  MessagesSquare
+  MessagesSquare,
+  Gift
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
+import { useAppConfig } from '../hooks/useAppConfig';
+
 export default function Profile() {
+  const config = useAppConfig();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -34,9 +38,17 @@ export default function Profile() {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
+    let active = true;
+    const safetyTimeout = setTimeout(() => {
+        if (active && loading) {
+            console.warn("Profile fetch safety timeout triggered");
+            setLoading(false);
+        }
+    }, 6000);
+
     const fetchProfile = async () => {
       if (!auth.currentUser) {
-        setLoading(false);
+        if (active) setLoading(false);
         return;
       }
 
@@ -50,12 +62,13 @@ export default function Profile() {
         createdAt: new Date().toISOString()
       };
       
-      setProfile(fallbackProfile);
+      if (active) setProfile(fallbackProfile);
 
       const path = `users/${auth.currentUser.uid}`;
       try {
         // Use the robust fetch helper
         const userDoc = await getDocFromServerWithRetry(doc(db, path));
+        if (!active) return;
         if (userDoc.exists()) {
             setProfile(userDoc.data());
         } else {
@@ -69,10 +82,17 @@ export default function Profile() {
       } catch (error: any) {
         console.warn("Profile fetch failed (using auth data):", error.message);
       } finally {
-        setLoading(false);
+        if (active) {
+            setLoading(false);
+            clearTimeout(safetyTimeout);
+        }
       }
     };
     fetchProfile();
+    return () => {
+        active = false;
+        clearTimeout(safetyTimeout);
+    };
   }, []);
 
   const handleUpdate = async () => {
@@ -163,187 +183,221 @@ export default function Profile() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 pb-32">
-      <header className="flex items-center justify-between px-1">
+    <div className="max-w-2xl mx-auto space-y-5 pb-32">
+      <header className="flex items-center justify-between px-2 pt-4">
         <h1 className="text-xl font-display font-bold tracking-tight">Settings</h1>
         <button 
           onClick={handleLogout}
-          className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+          className="p-2 text-brand-accent hover:text-brand-accent/80 transition-colors font-medium text-sm flex items-center gap-1"
           title="Logout"
         >
-          <LogOut className="w-5 h-5" />
+          <LogOut className="w-4 h-4" />
+          Logout
         </button>
       </header>
 
       {/* Profile Card */}
-      <section className="premium-card p-6 flex flex-col items-center text-center">
-        <div className="relative group/avatar mb-4">
-            <div className="w-20 h-20 rounded-2xl bg-gray-50 border-2 border-white shadow-xl flex items-center justify-center text-2xl font-display font-bold text-brand-primary overflow-hidden">
+      <section className="premium-card p-5 flex items-center gap-4">
+        <div className="relative group/avatar shrink-0">
+            <div className="w-16 h-16 rounded-full bg-[#E5E5EA] shadow-inner flex items-center justify-center text-xl font-display font-bold text-gray-500 overflow-hidden">
             {uploading ? (
-             <div className="w-6 h-6 border-2 border-brand-primary/30 border-t-brand-primary rounded-full animate-spin" />
+             <div className="w-5 h-5 border-2 border-brand-primary/30 border-t-brand-primary rounded-full animate-spin" />
             ) : profile.photoURL ? (
              <img src={profile.photoURL} className="w-full h-full object-cover" alt="Profile" />
             ) : (
              profile.displayName?.[0] || 'U'
             )}
             </div>
-            <label className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-black text-white flex items-center justify-center shadow-lg active:scale-95 transition-all cursor-pointer">
-                <Camera className="w-3.5 h-3.5" />
+            <label className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 text-white flex items-center justify-center shadow-lg active:scale-95 transition-all cursor-pointer">
+                <Camera className="w-3 h-3" />
                 <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
             </label>
         </div>
         
-        <div>
-            <h2 className="text-base font-bold text-gray-900">{profile.displayName || 'Unnamed User'}</h2>
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                Verified {profile.role} • {profile.email}
+        <div className="flex-1">
+            <h2 className="text-lg font-bold text-gray-900">{profile.displayName || 'Unnamed User'}</h2>
+            <div className="text-[11px] font-medium text-brand-primary mt-0.5">
+                Verified {profile.role === 'brand' ? 'Brand' : 'Creator'}
             </div>
+            <div className="text-[11px] text-gray-500 mt-0.5">{profile.email}</div>
         </div>
       </section>
 
       {/* Edit Form */}
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] ml-1">Display Name</label>
-                <div className="relative">
-                    <UserIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+      <section className="premium-card p-2 space-y-1">
+        <div className="px-3 pt-3 pb-1">
+            <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Public Profile</h3>
+        </div>
+        <div className="bg-white/50 rounded-xl">
+            <div className="flex items-center px-3 py-3 border-b border-gray-100">
+                <div className="w-1/3">
+                    <label className="text-[13px] font-semibold text-gray-900">Name</label>
+                </div>
+                <div className="w-2/3">
                     <input 
-                        className="w-full bg-white border border-gray-100 rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                        className="w-full bg-transparent text-[13px] text-gray-600 outline-none placeholder-gray-300"
                         value={profile.displayName || ''}
                         onChange={e => setProfile({...profile, displayName: e.target.value})}
+                        placeholder="Your display name"
                     />
                 </div>
             </div>
-            <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] ml-1">Location</label>
-                <div className="relative">
-                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <div className="flex items-center px-3 py-3 border-b border-gray-100">
+                <div className="w-1/3">
+                    <label className="text-[13px] font-semibold text-gray-900">Location</label>
+                </div>
+                <div className="w-2/3">
                     <input 
-                        className="w-full bg-white border border-gray-100 rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                        className="w-full bg-transparent text-[13px] text-gray-600 outline-none placeholder-gray-300"
                         value={profile.location || ''}
                         onChange={e => setProfile({...profile, location: e.target.value})}
                         placeholder="City, Country"
                     />
                 </div>
             </div>
+            <div className="flex items-start px-3 py-3">
+                <div className="w-1/3 pt-1">
+                    <label className="text-[13px] font-semibold text-gray-900">Bio</label>
+                </div>
+                <div className="w-2/3">
+                    <textarea 
+                        rows={2}
+                        className="w-full bg-transparent text-[13px] text-gray-600 outline-none resize-none placeholder-gray-300"
+                        value={profile.bio || ''}
+                        onChange={e => setProfile({...profile, bio: e.target.value})}
+                        placeholder="Briefly describe what you do..."
+                    />
+                </div>
+            </div>
         </div>
-
-        <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] ml-1">About / Bio</label>
-            <textarea 
-                rows={3}
-                className="w-full bg-white border border-gray-100 rounded-xl px-4 py-3 text-xs font-medium focus:ring-2 focus:ring-brand-primary/20 outline-none resize-none"
-                value={profile.bio || ''}
-                onChange={e => setProfile({...profile, bio: e.target.value})}
-                placeholder="Briefly describe what you do..."
-            />
+        <div className="px-2 pb-2 mt-2">
+            <button 
+              onClick={handleUpdate}
+              disabled={saving}
+              className={cn(
+                "premium-button-primary w-full flex items-center justify-center gap-2",
+                success ? "bg-green-500 shadow-green-100" : ""
+              )}
+            >
+              {saving ? 'Saving...' : success ? <><Check className="w-4 h-4" /> Changes Applied</> : 'Update Profile'}
+            </button>
         </div>
-      </div>
+      </section>
 
       {/* Menu / Links */}
-      <section className="space-y-2 pt-2">
+      <section className="premium-card p-2 space-y-1">
+        <div className="px-3 pt-3 pb-1">
+            <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Account Features</h3>
+        </div>
+        <div className="bg-white/50 rounded-xl overflow-hidden divide-y divide-gray-100 border border-gray-50">
+        {config.referEarn !== false && (
+            <button 
+              onClick={() => navigate('/dashboard/refer-earn')}
+              className="w-full p-4 flex items-center justify-between group bg-white hover:bg-gray-50 active:bg-gray-100 transition-all text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center text-orange-500">
+                  <Gift className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div className="text-[14px] font-medium text-gray-900">Refer & Earn</div>
+                  <div className="text-[10px] text-gray-500 inline-block mt-0.5">Invite friends and earn ₹50</div>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
+            </button>
+        )}
         <button 
           onClick={handlePasswordReset}
-          className="w-full premium-card p-4 flex items-center justify-between group bg-white border-gray-50 active:scale-[0.99] transition-all"
+          className="w-full p-4 flex items-center justify-between group bg-white hover:bg-gray-50 active:bg-gray-100 transition-all text-left"
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 group-hover:text-brand-primary transition-colors">
-              <Shield className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center text-blue-500">
+              <Shield className="w-3.5 h-3.5" />
             </div>
-            <div className="text-left">
-              <div className="text-xs font-bold text-gray-900">Security & Password</div>
-              <div className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Send reset email</div>
+            <div>
+              <div className="text-[14px] font-medium text-gray-900">Password & Security</div>
+              <div className="text-[10px] text-gray-500 inline-block mt-0.5">Send reset email</div>
             </div>
           </div>
-          <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+          <ChevronRight className="w-4 h-4 text-gray-300" />
         </button>
+        </div>
       </section>
 
       {/* Support & Contact */}
-      <section className="space-y-2 pt-2">
-        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1 mb-2 mt-4 flex items-center gap-2">
-          <span>Support & Contact</span>
-        </h3>
-        
-        <a 
-          href="mailto:rexoagency.in@gmail.com"
-          className="w-full premium-card p-4 flex items-center justify-between group bg-white border-gray-50 active:scale-[0.99] transition-all"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 group-hover:text-brand-primary transition-colors">
-              <Mail className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <div className="text-xs font-bold text-gray-900">Email Support</div>
-              <div className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">rexoagency.in@gmail.com</div>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-brand-primary" />
-        </a>
-
-        <a 
-          href="https://wa.me/919116965626"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full premium-card p-4 flex items-center justify-between group bg-white border-gray-50 active:scale-[0.99] transition-all"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 group-hover:text-emerald-500 transition-colors">
-              <MessageCircle className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <div className="text-xs font-bold text-gray-900">WhatsApp</div>
-              <div className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">+91 9116965626</div>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-emerald-500" />
-        </a>
-
-        <a 
-          href="https://t.me/rexoagencyofficial"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full premium-card p-4 flex items-center justify-between group bg-white border-gray-50 active:scale-[0.99] transition-all"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 group-hover:text-blue-500 transition-colors">
-              <Send className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <div className="text-xs font-bold text-gray-900">Telegram</div>
-              <div className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">@rexoagencyofficial</div>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500" />
-        </a>
-
-        {/* Social Links */}
-        <div className="flex justify-center items-center gap-8 pt-8 px-4">
-            <a href="https://www.instagram.com/rexoagency.in?igsh=bmlvbThyaGJseDFn" target="_blank" rel="noopener noreferrer" className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-400 hover:text-pink-600 transition-all hover:scale-110 active:scale-95">
-                <Instagram className="w-6 h-6" />
+      {config.support !== false && (
+      <section className="premium-card p-2 space-y-1">
+        <div className="px-3 pt-3 pb-1">
+            <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Support</h3>
+        </div>
+        <div className="bg-white/50 rounded-xl overflow-hidden divide-y divide-gray-100 border border-gray-50">
+            <a 
+              href="mailto:rexoagency.in@gmail.com"
+              className="w-full p-4 flex items-center justify-between group bg-white hover:bg-gray-50 active:bg-gray-100 transition-all text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500">
+                  <Mail className="w-3.5 h-3.5" />
+                </div>
+                <div className="text-[14px] font-medium text-gray-900">Email Option</div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
             </a>
-            <a href="https://www.linkedin.com/in/mukhtiyar-khan-7a61261b1?utm_source=share_via&utm_content=profile&utm_medium=member_android" target="_blank" rel="noopener noreferrer" className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-400 hover:text-blue-700 transition-all hover:scale-110 active:scale-95">
-                <Linkedin className="w-6 h-6" />
+
+            <a 
+              href="https://wa.me/919116965626"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full p-4 flex items-center justify-between group bg-white hover:bg-gray-50 active:bg-gray-100 transition-all text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-500">
+                  <MessageCircle className="w-3.5 h-3.5" />
+                </div>
+                <div className="text-[14px] font-medium text-gray-900">WhatsApp Team</div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
             </a>
-            <a href="https://discord.gg/9at8Hryvy" target="_blank" rel="noopener noreferrer" className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-400 hover:text-indigo-600 transition-all hover:scale-110 active:scale-95">
-                <MessagesSquare className="w-6 h-6" />
+
+            <a 
+              href="https://t.me/rexoagencyofficial"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full p-4 flex items-center justify-between group bg-white hover:bg-gray-50 active:bg-gray-100 transition-all text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center text-blue-500">
+                  <Send className="w-3.5 h-3.5" />
+                </div>
+                <div className="text-[14px] font-medium text-gray-900">Telegram Channel</div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300" />
             </a>
         </div>
       </section>
+      )}
 
-      {/* Save Button */}
-      <div className="pt-4">
-        <button 
-          onClick={handleUpdate}
-          disabled={saving}
-          className={cn(
-            "premium-button-primary w-full flex items-center justify-center gap-2",
-            success ? "bg-green-500 shadow-green-100" : ""
-          )}
-        >
-          {saving ? 'Saving...' : success ? <><Check className="w-4 h-4" /> Changes Applied</> : 'Update Profile'}
-        </button>
+      <div className="flex justify-center items-center gap-6 pt-2">
+            <a href="https://www.instagram.com/rexoagency.in?igsh=bmlvbThyaGJseDFn" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#E1306C] transition-all">
+                <Instagram className="w-5 h-5" />
+            </a>
+            <a href="https://www.linkedin.com/in/mukhtiyar-khan-7a61261b1?utm_source=share_via&utm_content=profile&utm_medium=member_android" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#0077B5] transition-all">
+                <Linkedin className="w-5 h-5" />
+            </a>
+            <a href="https://discord.gg/9at8Hryvy" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#5865F2] transition-all">
+                <MessagesSquare className="w-5 h-5" />
+            </a>
+      </div>
+
+      {/* Made in India */}
+      <div className="flex flex-col items-center justify-center py-4 text-gray-400 gap-1 opacity-60">
+          <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest">
+              <span>Made with</span>
+              <span className="text-red-500">❤️</span>
+              <span>in India</span>
+          </div>
+          <span className="text-[9px] font-medium tracking-wider">v1.1.0 • REXO AGENCY</span>
       </div>
     </div>
   );

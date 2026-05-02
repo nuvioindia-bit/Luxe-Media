@@ -21,6 +21,7 @@ import {
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, onSnapshot, runTransaction, deleteDoc } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType, getDocFromServerWithRetry } from '../lib/firebase';
 import { cn } from '../lib/utils';
+import { isAdminEmail } from '../constants';
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -64,10 +65,13 @@ export default function CampaignDetail() {
   });
 
   const handleDelete = async () => {
+    if (!campaign || !campaign.id) return;
     try {
+      setLoading(true);
       await deleteDoc(doc(db, 'campaigns', campaign.id));
       navigate(role === 'admin' ? '/admin' : '/dashboard/brand');
     } catch (error) {
+      setLoading(false);
       handleFirestoreError(error, OperationType.DELETE, 'campaigns');
     }
   };
@@ -106,11 +110,13 @@ export default function CampaignDetail() {
   useEffect(() => {
     if (!id || !auth.currentUser) return;
 
+    let unsubApps: (() => void) | null = null;
+
     const fetchData = async () => {
       setLoading(true);
       try {
         // Fetch User Role - Fix for Admin detection
-        const isAdminUser = auth.currentUser?.email === 'job.rexoagency@gmail.com';
+        const isAdminUser = isAdminEmail(auth.currentUser?.email);
         
         let userRole = isAdminUser ? 'admin' : null;
         
@@ -131,9 +137,12 @@ export default function CampaignDetail() {
           if (campaignDoc.exists()) {
             const data = campaignDoc.data() as any;
             setCampaign({ id: campaignDoc.id, ...data });
+          } else {
+            setCampaign(null);
           }
         } catch (err: any) {
           console.warn("Failed to fetch campaign details (offline fallback):", err.message);
+          setCampaign(null);
         }
 
         // Perspective-based fetching
@@ -153,13 +162,12 @@ export default function CampaignDetail() {
             collection(db, 'applications'),
             where('campaignId', '==', id)
           );
-          const unsub = onSnapshot(q, (snapshot) => {
+          unsubApps = onSnapshot(q, (snapshot) => {
             const apps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setBrandApplications(apps);
           }, (error) => {
             handleFirestoreError(error, OperationType.LIST, 'applications');
           });
-          return () => unsub();
         }
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, `campaigns/${id}`);
@@ -169,6 +177,10 @@ export default function CampaignDetail() {
     };
 
     fetchData();
+
+    return () => {
+      if (unsubApps) unsubApps();
+    };
   }, [id]);
 
   const handleApply = async (e: React.FormEvent) => {
@@ -277,7 +289,7 @@ export default function CampaignDetail() {
             </button>
             <div>
             <h1 className="text-lg font-display font-bold truncate max-w-[200px]">{campaign.title}</h1>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{campaign.brand}</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{campaign.brandName || campaign.brand || 'Brand'}</p>
             </div>
         </div>
         {(role === 'admin' || (role === 'brand' && campaign.brandId === auth.currentUser?.uid)) && (
@@ -477,7 +489,7 @@ export default function CampaignDetail() {
                             title: 'Application Accepted!',
                             message: `Congratulations! Your application for "${campaign.title}" was accepted.`,
                             createdAt: serverTimestamp(),
-                            referenceId: app.id,
+                            referenceId: campaign.id,
                             read: false
                         });
                       }}
@@ -495,7 +507,7 @@ export default function CampaignDetail() {
                             title: 'Application Update',
                             message: `Thank you for your interest. Unfortunately, your application for "${campaign.title}" was not selected.`,
                             createdAt: serverTimestamp(),
-                            referenceId: app.id,
+                            referenceId: campaign.id,
                             read: false
                         });
                       }}

@@ -81,9 +81,18 @@ export default function Wallet() {
     e.preventDefault();
     if (!auth.currentUser || !amount || parseFloat(amount) > balance) return;
 
+    let isStillLoading = true;
     setLoading(true);
+    
+    const safetyTimeout = setTimeout(() => {
+      if (isStillLoading) {
+        setLoading(false);
+        isStillLoading = false;
+        alert("Withdrawal request is taking longer than expected. Please check your transaction history in a moment.");
+      }
+    }, 15000);
+
     const withdrawalPath = `users/${auth.currentUser.uid}/withdrawals`;
-    const transactionPath = `users/${auth.currentUser.uid}/transactions`;
     try {
       const amountNum = parseFloat(amount);
       
@@ -148,9 +157,12 @@ export default function Wallet() {
         setWithdrawType(null);
         setAmount('');
       }, 2000);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, withdrawalPath);
+    } catch (error: any) {
+      console.error("Withdrawal error:", error);
+      alert(error.message || "Failed to process withdrawal. Please check your connection.");
     } finally {
+      isStillLoading = false;
+      clearTimeout(safetyTimeout);
       setLoading(false);
     }
   };

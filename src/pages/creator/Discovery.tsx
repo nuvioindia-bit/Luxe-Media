@@ -13,7 +13,15 @@ import {
   CheckCircle2,
   ChevronRight
 } from 'lucide-react';
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  addDoc, 
+  serverTimestamp,
+  onSnapshot 
+} from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { cn } from '../../lib/utils';
 
@@ -28,6 +36,9 @@ export default function Discovery() {
 
   useEffect(() => {
     let active = true;
+    const campaignsPath = 'campaigns';
+    const q = query(collection(db, campaignsPath), where('status', '==', 'active'));
+    
     const safetyTimeout = setTimeout(() => {
       if (active && loading) {
         console.warn("Discovery fetch safety timeout triggered");
@@ -35,33 +46,25 @@ export default function Discovery() {
       }
     }, 6000); // 6s safety timeout
 
-    async function fetchCampaigns() {
-      setLoading(true);
-      const campaignsPath = 'campaigns';
-      try {
-        const q = query(collection(db, campaignsPath), where('status', '==', 'active'));
-        const snapshot = await getDocs(q);
+    const unsubscribeSnap = onSnapshot(q, (snapshot) => {
         if (!active) return;
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setCampaigns(data);
-      } catch (error: any) {
+        setLoading(false);
+        clearTimeout(safetyTimeout);
+    }, (error: any) => {
         if (active) {
-          if (!error.message?.includes('offline')) {
-              handleFirestoreError(error, OperationType.LIST, campaignsPath);
-          } else {
-              console.warn("Discovery fetch failed (offline)");
-          }
+            console.error("Discovery Sync Error:", error);
+            setLoading(false);
+            if (!error.message?.includes('offline')) {
+                handleFirestoreError(error, OperationType.LIST, campaignsPath);
+            }
         }
-      } finally {
-        if (active) {
-          setLoading(false);
-          clearTimeout(safetyTimeout);
-        }
-      }
-    }
-    fetchCampaigns();
+    });
+
     return () => {
       active = false;
+      unsubscribeSnap();
       clearTimeout(safetyTimeout);
     };
   }, []);
@@ -69,6 +72,7 @@ export default function Discovery() {
   const filtered = campaigns.filter(c => 
     (activeTab === 'All' || c.category === activeTab) &&
     ((c.title?.toLowerCase().includes(search.toLowerCase())) || 
+     (c.brandName?.toLowerCase().includes(search.toLowerCase())) ||
      (c.brand?.toLowerCase().includes(search.toLowerCase())))
   );
 
@@ -158,7 +162,7 @@ export default function Discovery() {
                     <div className="flex justify-between items-start mb-3">
                         <div>
                             <h3 className="text-base font-display font-bold leading-tight group-hover:text-brand-primary transition-colors">{campaign.title}</h3>
-                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{campaign.brand || 'Brand'}</p>
+                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{campaign.brandName || campaign.brand || 'Brand'}</p>
                         </div>
                         <div className="text-[11px] font-bold text-gray-900 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">
                             {campaign.budget}

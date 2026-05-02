@@ -42,43 +42,46 @@ export default function Auth() {
         }
         const res = await createUserWithEmailAndPassword(auth, email, password);
         
+        // Fast-track profile and wallet creation in background to avoid blocking user
         const userPath = `users/${res.user.uid}`;
-        try {
-          await setDoc(doc(db, userPath), {
-            uid: res.user.uid,
-            email: res.user.email,
-            role,
-            fullName,
-            userName,
-            createdAt: new Date().toISOString(),
-            displayName: fullName || userName || email.split('@')[0]
-          });
-        } catch (error) {
-          handleFirestoreError(error, OperationType.WRITE, userPath);
-        }
-        
-        // Initialize wallet
         const walletPath = `users/${res.user.uid}/wallet/balance`;
-        try {
-          await setDoc(doc(db, walletPath), {
-            userId: res.user.uid,
-            balance: 0,
-            totalEarned: 0,
-            totalSpent: 0,
-            currency: 'INR',
-            updatedAt: new Date().toISOString()
-          });
-        } catch (error) {
-          handleFirestoreError(error, OperationType.WRITE, walletPath);
-        }
+        
+        setDoc(doc(db, userPath), {
+          uid: res.user.uid,
+          email: res.user.email,
+          role,
+          fullName,
+          userName,
+          createdAt: new Date().toISOString(),
+          displayName: fullName || userName || email.split('@')[0]
+        }).catch(e => console.warn("Background user creation failed:", e));
+
+        setDoc(doc(db, walletPath), {
+          userId: res.user.uid,
+          balance: 0,
+          totalEarned: 0,
+          totalSpent: 0,
+          currency: 'INR',
+          updatedAt: new Date().toISOString()
+        }).catch(e => console.warn("Background wallet creation failed:", e));
       }
     } catch (err: any) {
-      // If it's a JSON error from handleFirestoreError, parse it for the UI
+      console.error("Auth Error:", err);
+      let message = err.message || 'Authentication Failed';
+      
+      if (message.includes('unauthorized-domain')) {
+        message = "DOMAIN ERROR: Please add 'aistudio.google.com' to your Firebase Console -> Authentication -> Settings -> Authorized Domains.";
+      } else if (message.includes('network-request-failed')) {
+        message = "Network error. Please check your internet connection or try again later.";
+      } else if (message.includes('invalid-credential')) {
+        message = "Invalid email or password.";
+      }
+      
       try {
         const parsed = JSON.parse(err.message);
-        setError(parsed.error || 'Permission Denied');
+        setError(parsed.error || message);
       } catch {
-        setError(err.message);
+        setError(message);
       }
     } finally {
       setLoading(false);
@@ -109,42 +112,20 @@ export default function Auth() {
     const provider = new GoogleAuthProvider();
     try {
       const res = await signInWithPopup(auth, provider);
-      
-      // We perform high-speed optimistic setup
-      const userPath = `users/${res.user.uid}`;
-      const walletPath = `users/${res.user.uid}/wallet/balance`;
-      
-      // Fire-and-forget background initialization
-      setDoc(doc(db, userPath), {
-        uid: res.user.uid,
-        email: res.user.email,
-        role: role || 'creator', 
-        displayName: res.user.displayName,
-        photoURL: res.user.photoURL,
-        createdAt: new Date().toISOString()
-      }, { merge: true }).catch(e => console.warn("Initial user doc fail:", e));
-
-      // Quick check/init for wallet
-      const walletRef = doc(db, walletPath);
-      getDoc(walletRef).then(snap => {
-        if (!snap.exists()) {
-          setDoc(walletRef, {
-            userId: res.user.uid,
-            balance: 0,
-            totalEarned: 0,
-            totalSpent: 0,
-            currency: 'INR',
-            updatedAt: new Date().toISOString()
-          }).catch(e => console.warn("Wallet init fail:", e));
-        }
-      }).catch(e => console.warn("Wallet check fail:", e));
-
-      // The onAuthStateChanged in App.tsx will handle the UI transition
-      // We don't call setLoading(false) here because we are about to be unmounted/redirected.
+      // Let App.tsx handle new user onboarding if document doesn't exist
     } catch (err: any) {
       setLoading(false);
-      const message = err.message || 'Authentication Failed';
+      console.error("Google Auth Error:", err);
+      let message = err.message || 'Authentication Failed';
+      
       if (message.includes('popup-closed-by-user')) return;
+      
+      if (message.includes('unauthorized-domain')) {
+        message = "DOMAIN ERROR: Please add 'aistudio.google.com' to your Firebase Console -> Authentication -> Settings -> Authorized Domains.";
+      } else if (message.includes('network-request-failed')) {
+        message = "Network error. Please check your internet connection.";
+      }
+      
       setError(message);
     }
   };

@@ -1,39 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Outfit", sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   
   --radius-3xl: 1.5rem;
   --radius-4xl: 2rem;
   
-  --color-brand-primary: #3B82F6;
-  --color-brand-secondary: #6366F1;
-  --color-brand-accent: #F43F5E;
+  --color-brand-primary: #007AFF; /* iOS Vivid Blue */
+  --color-brand-secondary: #5856D6; /* iOS Purple */
+  --color-brand-accent: #FF2D55; /* iOS Pink/Red */
 }
 
 @layer base {
   body {
-    @apply bg-[#F8F9FA] text-[#1A1A1A] antialiased min-h-screen selection:bg-brand-primary/10;
+    @apply bg-[#F2F2F7] text-[#1C1C1E] antialiased min-h-screen selection:bg-brand-primary/20 font-sans tracking-tight;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight font-display;
   }
 }
 
 @layer components {
   .premium-card {
-    @apply bg-white rounded-xl p-3 shadow-[0_4px_15px_rgb(0,0,0,0.02)] border border-gray-100/50 hover:shadow-[0_8px_25px_rgb(0,0,0,0.05)] transition-all duration-300;
+    @apply bg-white/70 backdrop-blur-xl rounded-[1.25rem] p-4 shadow-[0_2px_10px_rgb(0,0,0,0.02)] border border-white/50 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-300;
   }
   
   .premium-button-primary {
-    @apply relative overflow-hidden bg-brand-primary text-white font-semibold px-3.5 py-2 rounded-lg shadow-md shadow-brand-primary/10 hover:shadow-lg hover:shadow-brand-primary/20 transition-all duration-300 active:scale-[0.98] text-[12px];
+    @apply relative overflow-hidden bg-brand-primary/90 backdrop-blur-md text-white font-semibold px-4 py-3 rounded-2xl shadow-[0_8px_20px_rgba(0,122,255,0.25)] border border-white/20 hover:shadow-[0_12px_25px_rgba(0,122,255,0.35)] transition-all duration-300 active:scale-[0.97] text-sm;
   }
 
   .premium-button-secondary {
-    @apply bg-white text-[#1A1A1A] font-semibold px-3.5 py-2 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-300 active:scale-[0.98] text-[12px];
+    @apply bg-white/70 backdrop-blur-md text-[#1C1C1E] font-semibold px-4 py-3 rounded-2xl border border-white/50 shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:bg-white transition-all duration-300 active:scale-[0.97] text-sm;
   }
 
   .glass-nav {
-    @apply bg-white/80 backdrop-blur-xl border-t border-gray-100;
+    @apply bg-white/80 backdrop-blur-2xl border-t border-gray-200/50 shadow-[0_-10px_40px_rgba(0,0,0,0.04)];
   }
 
   .text-gradient {

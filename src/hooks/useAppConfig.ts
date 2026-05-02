@@ -10,6 +10,16 @@ export interface AppConfig {
   allow_payments?: boolean;
   allow_withdrawals?: boolean;
   maintenance_mode?: boolean;
+  
+  // Page Management settings
+  homePage?: boolean;
+  wallet?: boolean;
+  withdraw?: boolean;
+  campaigns?: boolean;
+  referEarn?: boolean;
+  offers?: boolean;
+  support?: boolean;
+  notifications?: boolean;
 }
 
 export function useAppConfig() {
@@ -17,7 +27,15 @@ export function useAppConfig() {
     show_trending: true,
     show_ai_pilot: true,
     show_market_insights: true,
-    maintenance_mode: false
+    maintenance_mode: false,
+    homePage: true,
+    wallet: true,
+    withdraw: true,
+    campaigns: true,
+    referEarn: true,
+    offers: true,
+    support: true,
+    notifications: true
   });
 
   useEffect(() => {

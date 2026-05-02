@@ -18,6 +18,7 @@ import { db, auth, storage, handleFirestoreError, OperationType } from '../../li
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { cn } from '../../lib/utils';
+import { isAdminEmail } from '../../constants';
 
 export default function CreateCampaign() {
   const navigate = useNavigate();
@@ -126,14 +127,42 @@ export default function CreateCampaign() {
   const handleSubmit = async () => {
     if (!validateStep()) return;
     if (!auth.currentUser) return;
-    const isAdmin = auth.currentUser?.email === 'job.rexoagency@gmail.com';
+    const isAdmin = isAdminEmail(auth.currentUser?.email);
+    let isStillLoading = true;
     setLoading(true);
+    
+    // Safety timeout for the submission process
+    const safetyTimeout = setTimeout(() => {
+      if (isStillLoading) {
+        setLoading(false);
+        isStillLoading = false;
+        alert("Submission is taking longer than expected. Please check your internet connection.");
+      }
+    }, 15000);
+
     try {
+      const cleanedFormData = { ...formData };
+      
+      // Ensure numeric types
+      const cpmValue = parseFloat(formData.cpm) || 0;
+      const totalBudgetValue = parseFloat(formData.totalBudget as any) || 0;
+
       const campaignData = {
-        ...formData,
-        budget: (formData.campaignType === 'Logo' || formData.campaignType === 'Clippings') 
-          ? `₹${formData.cpm} CPM` 
-          : `₹${Number(formData.cpm).toLocaleString()} / Post`,
+        title: cleanedFormData.title,
+        description: cleanedFormData.description,
+        category: cleanedFormData.category,
+        campaignType: cleanedFormData.campaignType,
+        platform: cleanedFormData.platform,
+        budget: (cleanedFormData.campaignType === 'Logo' || cleanedFormData.campaignType === 'Clippings') 
+          ? `₹${cpmValue} CPM` 
+          : `₹${cpmValue.toLocaleString()} / Post`,
+        cpm: cpmValue,
+        totalBudget: totalBudgetValue,
+        timeline: cleanedFormData.timeline,
+        location: cleanedFormData.location,
+        image: cleanedFormData.image,
+        requirements: cleanedFormData.requirements,
+        driveLink: cleanedFormData.driveLink,
         brandId: auth.currentUser.uid,
         brandName: isAdmin ? 'Rexo Administration' : (auth.currentUser.displayName || 'Brand'),
         brandEmail: auth.currentUser?.email,
@@ -157,9 +186,30 @@ export default function CreateCampaign() {
       }
 
       setStep(4); // Success step
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'campaigns');
+    } catch (error: any) {
+      console.error("Campaign Creation Error:", error);
+      let displayError = "Failed to create campaign. Please try again.";
+      try {
+        // We still call this for logging, but we'll handle the UI here
+        handleFirestoreError(error, OperationType.WRITE, 'campaigns');
+      } catch (err: any) {
+        try {
+          const parsed = JSON.parse(err.message);
+          if (parsed.error?.includes('offline')) {
+            displayError = "You appear to be offline. Your campaign will be saved locally and synced when you're back online.";
+          } else if (parsed.error?.includes('permission')) {
+            displayError = "Access denied. Please ensure you are logged in as a verified Brand account.";
+          } else {
+            displayError = parsed.error || displayError;
+          }
+        } catch {
+          displayError = err.message || displayError;
+        }
+      }
+      alert(displayError);
     } finally {
+      isStillLoading = false;
+      clearTimeout(safetyTimeout);
       setLoading(false);
     }
   };

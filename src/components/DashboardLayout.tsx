@@ -21,6 +21,7 @@ import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { doc, onSnapshot, collection, query, where, orderBy, updateDoc, getDocs } from 'firebase/firestore';
 import { cn } from '../lib/utils';
 import { useAppConfig } from '../hooks/useAppConfig';
+import { isAdminEmail } from '../constants';
 
 interface Props {
   user: User;
@@ -44,16 +45,27 @@ export default function DashboardLayout({ user, role }: Props) {
             setIsBanned(false);
         }
     });
-
-    const notifRecipient = user?.email === 'job.rexoagency@gmail.com' ? 'admin' : user?.uid;
+    
+    // Check if user is admin based on email
+    const isAdmin = isAdminEmail(user?.email);
+    const notifRecipient = isAdmin ? 'admin' : user?.uid;
+    
+    // Index Error Fix: We remove the orderBy cloud-side to avoid needing a composite index.
+    // We will sort the results in memory (JS side) instead.
     const q = query(
       collection(db, 'notifications'),
-      where('recipientId', '==', notifRecipient),
-      orderBy('createdAt', 'desc')
+      where('recipientId', '==', notifRecipient)
     );
 
     const unsubNotifs = onSnapshot(q, (snap) => {
-      setNotifications(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort in-memory to resolve the Firebase "Index Required" crash
+      docs.sort((a: any, b: any) => {
+        const dateA = (a as any).createdAt?.toDate ? (a as any).createdAt.toDate() : new Date(0);
+        const dateB = (b as any).createdAt?.toDate ? (b as any).createdAt.toDate() : new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      });
+      setNotifications(docs);
     }, (error) => {
         console.error("Notifications Sync Error:", error);
     });
@@ -97,18 +109,18 @@ export default function DashboardLayout({ user, role }: Props) {
   };
 
   const navItems = [
-    { 
+    ...(config.homePage !== false ? [{ 
       path: '/dashboard', 
       label: 'Home', 
       icon: <Search className="w-5 h-5" />,
       exact: true 
-    },
-    ...(config.allow_payments !== false ? [{ 
+    }] : []),
+    ...(config.wallet !== false ? [{ 
       path: '/dashboard/wallet', 
       label: 'Wallet', 
       icon: <WalletIcon className="w-5 h-5" /> 
     }] : []),
-    ...(role === 'brand' || user?.email === 'job.rexoagency@gmail.com' ? [{ 
+    ...(config.campaigns !== false && (role === 'brand' || isAdminEmail(user?.email)) ? [{ 
       path: '/dashboard/create', 
       label: 'Post Ad', 
       icon: <PlusCircle className="w-5 h-5" /> 
@@ -123,7 +135,7 @@ export default function DashboardLayout({ user, role }: Props) {
       label: 'Profile', 
       icon: <UserIcon className="w-5 h-5" /> 
     },
-    ...(user?.email === 'job.rexoagency@gmail.com' ? [{
+    ...(isAdminEmail(user?.email) ? [{
       path: '/dashboard/admin',
       label: 'Admin',
       icon: <ShieldCheck className="w-5 h-5 text-indigo-600" />
@@ -143,11 +155,11 @@ export default function DashboardLayout({ user, role }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F2F2F7] flex flex-col font-sans">
       {/* Top Header - Glass Effect */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-3 py-2 flex justify-between items-center transition-all duration-300">
-        <div className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/dashboard')}>
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden shadow-sm border border-gray-100 bg-white">
+      <header className="sticky top-0 z-40 bg-white/70 backdrop-blur-2xl border-b border-white/50 px-3 py-2.5 flex justify-between items-center transition-all duration-300 shadow-[0_2px_20px_rgb(0,0,0,0.04)]">
+        <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/dashboard')}>
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center overflow-hidden shadow-sm bg-white">
             <img 
               src="https://i.postimg.cc/DyJxL7mx/file-0000000008cc720b9d91dbcfd5fecf45.png" 
               alt="Logo" 
@@ -156,82 +168,86 @@ export default function DashboardLayout({ user, role }: Props) {
             />
           </div>
           <div>
-            <h1 className="text-[11px] font-display font-bold leading-none mb-0.5">Rexo Tool</h1>
-            <p className="text-[8px] font-semibold text-gray-400 uppercase tracking-widest">{role} account</p>
+            <h1 className="text-[12px] font-display font-bold leading-none mb-0.5 tracking-tight text-[#1C1C1E]">Rexo Tool</h1>
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{role} account</p>
           </div>
         </div>
         
         <div className="flex items-center gap-1.5 relative">
-          <button 
-            onClick={() => {
-                setShowNotifs(!showNotifs);
-                if (!showNotifs && unreadCount > 0) markAllRead();
-            }}
-            className={cn(
-                "relative w-7 h-7 rounded-lg flex items-center justify-center transition-all border",
-                showNotifs ? "bg-brand-primary text-white border-brand-primary" : "bg-gray-50 text-gray-500 border-gray-100 hover:bg-gray-100"
-            )}
-          >
-            <Bell className="w-3.5 h-3.5" />
-            {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-accent border-2 border-white"></span>
-                </span>
-            )}
-          </button>
+          {config.notifications !== false && (
+            <>
+              <button 
+                onClick={() => {
+                    setShowNotifs(!showNotifs);
+                    if (!showNotifs && unreadCount > 0) markAllRead();
+                }}
+                className={cn(
+                    "relative w-7 h-7 rounded-lg flex items-center justify-center transition-all border",
+                    showNotifs ? "bg-brand-primary text-white border-brand-primary" : "bg-gray-50 text-gray-500 border-gray-100 hover:bg-gray-100"
+                )}
+              >
+                <Bell className="w-3.5 h-3.5" />
+                {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-accent border-2 border-white"></span>
+                    </span>
+                )}
+              </button>
 
-          {/* Notifications Dropdown */}
-          <AnimatePresence>
-            {showNotifs && (
-                <motion.div 
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 top-10 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden"
-                >
-                    <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-900">Alert Center</h3>
-                        <span className="text-[8px] font-black bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">{notifications.length} Total</span>
-                    </div>
-                    <div className="max-h-80 overflow-y-auto no-scrollbar">
-                        {notifications.length > 0 ? notifications.map(notif => (
-                            <div 
-                                key={notif.id} 
-                                onClick={() => {
-                                    if (notif.referenceId) navigate(notif.type === 'campaign_post' ? '/dashboard/admin' : `/dashboard/campaign/${notif.referenceId}`);
-                                    setShowNotifs(false);
-                                }}
-                                className={cn(
-                                    "p-3.5 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer flex gap-3",
-                                    !notif.read && "bg-indigo-50/20"
-                                )}
-                            >
-                                <div className={cn(
-                                    "w-8 h-8 rounded-lg shrink-0 flex items-center justify-center shadow-sm",
-                                    notif.type === 'payment' ? "bg-emerald-50 text-emerald-600" :
-                                    notif.type === 'application' ? "bg-blue-50 text-blue-600" :
-                                    "bg-indigo-50 text-indigo-600"
-                                )}>
-                                    <Bell className="w-4 h-4" />
+              {/* Notifications Dropdown */}
+              <AnimatePresence>
+                {showNotifs && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute right-0 top-10 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden"
+                    >
+                        <div className="p-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-900">Alert Center</h3>
+                            <span className="text-[8px] font-black bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">{notifications.length} Total</span>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto no-scrollbar">
+                            {notifications.length > 0 ? notifications.map(notif => (
+                                <div 
+                                    key={notif.id} 
+                                    onClick={() => {
+                                        if (notif.referenceId) navigate(notif.type === 'campaign_post' ? '/dashboard/admin' : `/dashboard/campaign/${notif.referenceId}`);
+                                        setShowNotifs(false);
+                                    }}
+                                    className={cn(
+                                        "p-3.5 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer flex gap-3",
+                                        !notif.read && "bg-indigo-50/20"
+                                    )}
+                                >
+                                    <div className={cn(
+                                        "w-8 h-8 rounded-lg shrink-0 flex items-center justify-center shadow-sm",
+                                        notif.type === 'payment' ? "bg-emerald-50 text-emerald-600" :
+                                        notif.type === 'application' ? "bg-blue-50 text-blue-600" :
+                                        "bg-indigo-50 text-indigo-600"
+                                    )}>
+                                        <Bell className="w-4 h-4" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[11px] font-bold text-gray-900 truncate uppercase tracking-tighter">{notif.title}</p>
+                                        <p className="text-[9px] text-gray-500 font-medium line-clamp-2 mt-0.5 leading-relaxed">{notif.message}</p>
+                                        <p className="text-[7px] font-bold text-gray-400 mt-2 uppercase tracking-widest">
+                                            {notif.createdAt?.toDate ? notif.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-[11px] font-bold text-gray-900 truncate uppercase tracking-tighter">{notif.title}</p>
-                                    <p className="text-[9px] text-gray-500 font-medium line-clamp-2 mt-0.5 leading-relaxed">{notif.message}</p>
-                                    <p className="text-[7px] font-bold text-gray-400 mt-2 uppercase tracking-widest">
-                                        {notif.createdAt?.toDate ? notif.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
-                                    </p>
+                            )) : (
+                                <div className="p-10 text-center">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">No alerts to show</p>
                                 </div>
-                            </div>
-                        )) : (
-                            <div className="p-10 text-center">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">No alerts to show</p>
-                            </div>
-                        )}
-                    </div>
-                </motion.div>
-            )}
-          </AnimatePresence>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
           <button 
             onClick={handleLogout}
             className="w-7 h-7 rounded-lg bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors border border-gray-100"
