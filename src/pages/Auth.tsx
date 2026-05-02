@@ -151,75 +151,28 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex flex-col md:flex-row font-sans">
-      {/* Left Pane - Branding & Intro (Hidden on Mobile) */}
-      <div className="hidden md:flex md:w-1/2 bg-[#1A1A1A] p-20 flex-col justify-between relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-full h-full opacity-20">
-            <div className="absolute top-[20%] left-[10%] w-64 h-64 bg-brand-primary rounded-full blur-[120px]" />
-            <div className="absolute bottom-[20%] right-[10%] w-64 h-64 bg-brand-secondary rounded-full blur-[120px]" />
-        </div>
-        
-        <div className="relative z-10">
-          <button 
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 text-white/50 hover:text-white transition-colors mb-12"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-semibold">Back to Site</span>
-          </button>
-          
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center text-white">
-              <Zap className="w-6 h-6 fill-white" />
-            </div>
-            <span className="font-display font-bold text-2xl text-white tracking-tight">Rexotool</span>
-          </div>
-
-          <h2 className="text-5xl font-display font-bold text-white leading-tight max-w-md">
-            Connect. <br />
-            Collaborate. <br />
-            Conquer.
-          </h2>
-        </div>
-
-        <div className="relative z-10">
-          <p className="text-white/60 text-lg max-w-sm mb-8">Join the native infrastructure for the global creator economy.</p>
-          <div className="flex gap-4">
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl w-32">
-                <div className="text-white font-bold text-xl">12k+</div>
-                <div className="text-white/40 text-[10px] font-semibold uppercase tracking-widest leading-none mt-1">Creators</div>
-            </div>
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl w-32">
-                <div className="text-white font-bold text-xl">$45M</div>
-                <div className="text-white/40 text-[10px] font-semibold uppercase tracking-widest leading-none mt-1">Payouts</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-6 font-sans">
       {/* Right Pane - Form */}
-      <div className="flex-1 flex items-center justify-center p-6 md:p-12">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-sm"
-        >
-          {/* Mobile Only Header */}
-          <div className="md:hidden flex items-center gap-1.5 mb-6">
-            <div className="w-6 h-6 bg-brand-primary rounded-lg flex items-center justify-center text-white">
-              <Zap className="w-3.5 h-3.5 fill-white" />
-            </div>
-            <span className="font-display font-bold text-lg tracking-tight">Rexotool</span>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-sm"
+      >
+        <div className="flex items-center justify-center gap-1.5 mb-6">
+          <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center text-white">
+            <Zap className="w-5 h-5 fill-white" />
           </div>
+          <span className="font-display font-bold text-2xl tracking-tight">Rexotool</span>
+        </div>
 
-          <div className="mb-8">
-            <h1 className="text-2xl font-display font-bold tracking-tight mb-1.5">
-              {isLogin ? 'Welcome Back' : 'Create Account'}
-            </h1>
-            <p className="text-gray-500 text-sm">
-              {isLogin ? 'Log in to your dashboard to manage campaigns.' : 'Sign up to start collaborating with brands globally.'}
-            </p>
-          </div>
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-display font-bold tracking-tight mb-1.5">
+            {isLogin ? 'Welcome Back' : 'Create Account'}
+          </h1>
+          <p className="text-gray-500 text-sm">
+            {isLogin ? 'Log in to your dashboard to manage campaigns.' : 'Sign up to start collaborating with brands globally.'}
+          </p>
+        </div>
 
           <div className="grid grid-cols-2 gap-3 mb-8">
                 <button 
@@ -378,10 +331,9 @@ export default function Auth() {
               ) : (
                 <>Already have an account? <span className="text-brand-primary">Sign In</span></>
               )}
-            </button>
-          </div>
-        </motion.div>
-      </div>
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 }
