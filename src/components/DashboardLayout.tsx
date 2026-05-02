@@ -125,16 +125,16 @@ export default function DashboardLayout({ user, role }: Props) {
       label: 'Post Ad', 
       icon: <PlusCircle className="w-5 h-5" /> 
     }] : []),
-    { 
+    ...(config.aiPilot !== false ? [{ 
       path: '/dashboard/ai-pilot', 
       label: 'AI', 
       icon: <Sparkles className="w-5 h-5 flex-shrink-0" /> 
-    },
-    { 
+    }] : []),
+    ...(config.profile !== false ? [{ 
       path: '/dashboard/profile', 
       label: 'Profile', 
       icon: <UserIcon className="w-5 h-5" /> 
-    },
+    }] : []),
     ...(isAdminEmail(user?.email) ? [{
       path: '/dashboard/admin',
       label: 'Admin',
@@ -213,7 +213,11 @@ export default function DashboardLayout({ user, role }: Props) {
                                 <div 
                                     key={notif.id} 
                                     onClick={() => {
-                                        if (notif.referenceId) navigate(notif.type === 'campaign_post' ? '/dashboard/admin' : `/dashboard/campaign/${notif.referenceId}`);
+                                        if (notif.referenceId) {
+                                          if (notif.type === 'campaign_post') navigate('/dashboard/admin');
+                                          else if (notif.type === 'application') navigate(`/dashboard/review/${notif.referenceId}`);
+                                          else navigate(`/dashboard/campaign/${notif.referenceId}`);
+                                        }
                                         setShowNotifs(false);
                                     }}
                                     className={cn(

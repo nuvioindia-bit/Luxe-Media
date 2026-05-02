@@ -41,11 +41,10 @@ export default function CreateCampaign() {
     driveLink: ''
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !auth.currentUser) return;
+    
     setUploading(true);
     try {
       const reader = new FileReader();
@@ -73,15 +72,18 @@ export default function CreateCampaign() {
           setUploading(false);
         };
         img.onerror = () => {
+            console.error("Image load error");
             setUploading(false);
             alert("Failed to process image.");
         }
       };
       reader.onerror = () => {
+          console.error("File read error");
           setUploading(false);
           alert("Failed to read file.");
       }
     } catch (error) {
+      console.error("Error uploading campaign image:", error);
       setUploading(false);
     }
   };
@@ -89,6 +91,8 @@ export default function CreateCampaign() {
   const categories = ['Meme', 'Tech', 'Comedy', 'Sports', 'Vlog'];
   const campaignTypes = ['Logo', 'Music', 'Clippings', 'UGC'];
   const platforms = ['Instagram', 'YouTube', 'Facebook', 'TikTok'];
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateStep = () => {
     const newErrors: Record<string, string> = {};
@@ -127,34 +131,38 @@ export default function CreateCampaign() {
     let isStillLoading = true;
     setLoading(true);
     
+    // Safety timeout for the submission process
     const safetyTimeout = setTimeout(() => {
       if (isStillLoading) {
         setLoading(false);
         isStillLoading = false;
         alert("Submission is taking longer than expected. Please check your internet connection.");
       }
-    }, 30000);
+    }, 15000);
 
     try {
+      const cleanedFormData = { ...formData };
+      
+      // Ensure numeric types
       const cpmValue = parseFloat(formData.cpm) || 0;
       const totalBudgetValue = parseFloat(formData.totalBudget as any) || 0;
 
       const campaignData = {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        campaignType: formData.campaignType,
-        platform: formData.platform,
-        budget: (formData.campaignType === 'Logo' || formData.campaignType === 'Clippings') 
+        title: cleanedFormData.title,
+        description: cleanedFormData.description,
+        category: cleanedFormData.category,
+        campaignType: cleanedFormData.campaignType,
+        platform: cleanedFormData.platform,
+        budget: (cleanedFormData.campaignType === 'Logo' || cleanedFormData.campaignType === 'Clippings') 
           ? `₹${cpmValue} CPM` 
           : `₹${cpmValue.toLocaleString()} / Post`,
         cpm: cpmValue,
         totalBudget: totalBudgetValue,
-        timeline: formData.timeline,
-        location: formData.location,
-        image: formData.image,
-        requirements: formData.requirements,
-        driveLink: formData.driveLink,
+        timeline: cleanedFormData.timeline,
+        location: cleanedFormData.location,
+        image: cleanedFormData.image,
+        requirements: cleanedFormData.requirements,
+        driveLink: cleanedFormData.driveLink,
         brandId: auth.currentUser.uid,
         brandName: isAdmin ? 'Rexo Administration' : (auth.currentUser.displayName || 'Brand'),
         brandEmail: auth.currentUser?.email,
@@ -163,8 +171,9 @@ export default function CreateCampaign() {
       };
 
       const campaignRef = await addDoc(collection(db, 'campaigns'), campaignData);
-      
+
       if (!isAdmin) {
+        // Notify Admin
         await addDoc(collection(db, 'notifications'), {
           recipientId: 'admin',
           type: 'campaign_post',
@@ -176,16 +185,31 @@ export default function CreateCampaign() {
         });
       }
 
-      isStillLoading = false;
-      clearTimeout(safetyTimeout);
-      setStep(4);
+      setStep(4); // Success step
     } catch (error: any) {
+      console.error("Campaign Creation Error:", error);
+      let displayError = "Failed to create campaign. Please try again.";
+      try {
+        // We still call this for logging, but we'll handle the UI here
+        handleFirestoreError(error, OperationType.WRITE, 'campaigns');
+      } catch (err: any) {
+        try {
+          const parsed = JSON.parse(err.message);
+          if (parsed.error?.includes('offline')) {
+            displayError = "You appear to be offline. Your campaign will be saved locally and synced when you're back online.";
+          } else if (parsed.error?.includes('permission')) {
+            displayError = "Access denied. Please ensure you are logged in as a verified Brand account.";
+          } else {
+            displayError = parsed.error || displayError;
+          }
+        } catch {
+          displayError = err.message || displayError;
+        }
+      }
+      alert(displayError);
+    } finally {
       isStillLoading = false;
       clearTimeout(safetyTimeout);
-      console.error("Campaign Creation Error:", error);
-      handleFirestoreError(error, OperationType.WRITE, 'campaigns');
-      alert("Failed to create campaign. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
@@ -214,7 +238,7 @@ export default function CreateCampaign() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto pb-20 px-4">
+    <div className="max-w-2xl mx-auto pb-20">
       {step < 4 && (
         <div className="flex items-center gap-2 mb-6">
             <button 
@@ -372,26 +396,60 @@ export default function CreateCampaign() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">
-                        {formData.campaignType === 'Logo' || formData.campaignType === 'Clippings' ? 'CPM (Cost Per 1k Views)' : 'Per Post Budget (₹)'}
-                    </label>
-                    <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">₹</span>
-                        <input 
-                            type="number" 
-                            value={formData.cpm}
-                            onChange={(e) => setFormData({...formData, cpm: e.target.value})}
-                            className={cn(
-                                "w-full bg-gray-50 border rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 transition-all font-medium text-xs",
-                                errors.cpm ? "border-red-300 ring-red-50" : "border-gray-100 focus:ring-brand-primary/20 focus:border-brand-primary"
-                            )}
-                            placeholder="e.g. 50"
-                        />
-                    </div>
-                    {errors.cpm && <p className="text-[9px] font-bold text-red-500 mt-1 ml-1">{errors.cpm}</p>}
-                </div>
-
+                {(formData.campaignType === 'Logo' || formData.campaignType === 'Clippings') ? (
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">CPM (Cost Per 1k Views)</label>
+                      <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">₹</span>
+                          <input 
+                              type="number" 
+                              min="0"
+                              step="0.01"
+                              value={formData.cpm}
+                              onChange={(e) => {
+                                  const val = e.target.value;
+                                  setFormData({
+                                      ...formData, 
+                                      cpm: val, 
+                                      budget: `₹${val} CPM`
+                                  });
+                              }}
+                              className={cn(
+                                  "w-full bg-gray-50 border rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 transition-all font-medium text-xs",
+                                  errors.cpm ? "border-red-300 ring-red-50" : "border-gray-100 focus:ring-brand-primary/20 focus:border-brand-primary"
+                              )}
+                              placeholder="e.g. 50"
+                          />
+                      </div>
+                      {errors.cpm && <p className="text-[9px] font-bold text-red-500 mt-1 ml-1">{errors.cpm}</p>}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Per Post Budget (₹)</label>
+                      <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">₹</span>
+                          <input 
+                              type="number" 
+                              value={formData.cpm} // Reuse cpm field for the numeric value of per-post
+                              onChange={(e) => {
+                                  const val = e.target.value;
+                                  setFormData({
+                                      ...formData, 
+                                      cpm: val, 
+                                      budget: `₹${Number(val).toLocaleString()} / Post`
+                                  });
+                              }}
+                              className={cn(
+                                  "w-full bg-gray-50 border rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 transition-all font-medium text-xs",
+                                  errors.cpm ? "border-red-300 ring-red-50" : "border-gray-100 focus:ring-brand-primary/20 focus:border-brand-primary"
+                              )}
+                              placeholder="e.g. 1500"
+                          />
+                      </div>
+                      {errors.cpm && <p className="text-[9px] font-bold text-red-500 mt-1 ml-1">{errors.cpm}</p>}
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Total Campaign Budget (₹)</label>
                     <div className="relative">
@@ -399,7 +457,10 @@ export default function CreateCampaign() {
                         <input 
                             type="number" 
                             value={formData.totalBudget || ''}
-                            onChange={(e) => setFormData({...formData, totalBudget: Number(e.target.value)})}
+                            onChange={(e) => {
+                                const val = Number(e.target.value);
+                                setFormData({...formData, totalBudget: val, budget: `₹${val.toLocaleString()}`});
+                            }}
                             className={cn(
                                 "w-full bg-gray-50 border rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 transition-all font-medium text-xs",
                                 errors.totalBudget ? "border-red-300 ring-red-50" : "border-gray-100 focus:ring-brand-primary/20 focus:border-brand-primary"
@@ -427,7 +488,7 @@ export default function CreateCampaign() {
                             placeholder="4 Weeks"
                         />
                     </div>
-  {errors.timeline && <p className="text-[9px] font-bold text-red-500 mt-1 ml-1">{errors.timeline}</p>}
+                    {errors.timeline && <p className="text-[9px] font-bold text-red-500 mt-1 ml-1">{errors.timeline}</p>}
                 </div>
                 <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Location Preference</label>
@@ -446,11 +507,7 @@ export default function CreateCampaign() {
 
             <div className="flex gap-4 mt-10">
                 <button onClick={prevStep} className="premium-button-secondary py-5 px-8">Back</button>
-                <button 
-                    onClick={nextStep} 
-                    disabled={!formData.totalBudget || !formData.timeline} 
-                    className="premium-button-primary flex-1 py-5 flex items-center justify-center gap-2 group"
-                >
+                <button onClick={nextStep} disabled={!formData.totalBudget || !formData.timeline} className="premium-button-primary flex-1 py-5 flex items-center justify-center gap-2 group">
                     Final Details
                     <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
@@ -531,7 +588,7 @@ export default function CreateCampaign() {
             >
                 <CheckCircle2 className="w-12 h-12 text-green-500" />
             </motion.div>
-            <h2 className="text-4xl font-display font-bold tracking-tight uppercase">Under Review</h2>
+            <h2 className="text-4xl font-display font-bold tracking-tight uppercase tracking-tighter">Under Review</h2>
             <p className="text-gray-500 max-w-sm mx-auto font-medium">Your campaign has been submitted for administrative verification. Once approved, it will be broadcasted to our elite creator network.</p>
             <div className="flex flex-col gap-3 pt-10">
                 <button onClick={() => navigate('/dashboard')} className="premium-button-primary py-5 flex items-center justify-center gap-2">

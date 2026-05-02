@@ -17,6 +17,7 @@ import CampaignDetail from './pages/CampaignDetail';
 import AIPilot from './pages/AIPilot';
 import AdminPanel from './pages/AdminPanel';
 import ReferEarn from './pages/ReferEarn';
+import ApplicationReview from './pages/ApplicationReview';
 
 import RoleSelection from './components/RoleSelection';
 
@@ -107,6 +108,7 @@ export default function App() {
           <Route path="refer-earn" element={<ReferEarn />} />
           <Route path="ai-pilot" element={<AIPilot />} />
           <Route path="admin" element={<AdminPanel />} />
+          <Route path="review/:appId" element={<ApplicationReview />} />
         </Route>
       </Routes>
     </BrowserRouter>

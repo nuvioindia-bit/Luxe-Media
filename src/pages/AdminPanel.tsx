@@ -13,6 +13,7 @@ import {
   UserCog, 
   Wallet, 
   Activity,
+  Zap,
   Settings,
   Plus,
   MoreVertical,
@@ -51,6 +52,7 @@ export default function AdminPanel() {
   const [search, setSearch] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
 
   useEffect(() => {
     const unsubUsers = onSnapshot(query(collection(db, 'users'), orderBy('createdAt', 'desc')), (snap) => {
@@ -339,7 +341,7 @@ export default function AdminPanel() {
                className="space-y-4"
             >
               {filteredCampaigns.map(c => (
-                <div key={c.id} className="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-gray-100">
+                <div key={c.id} className="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-gray-100 hover:border-indigo-100 transition-colors cursor-pointer" onClick={() => setSelectedCampaign(c)}>
                   <div className="p-5 flex gap-4">
                      <div className="w-20 h-20 rounded-[1.5rem] bg-gray-50 flex items-center justify-center overflow-hidden shrink-0 border border-gray-100">
                        {c.image ? <img src={c.image} className="w-full h-full object-cover" /> : <Megaphone className="w-8 h-8 text-gray-200" />}
@@ -461,15 +463,14 @@ export default function AdminPanel() {
                 
                 <div className="grid gap-6">
                   {[
-                    { key: 'homePage', label: 'Feed', icon: Activity },
-                    { key: 'wallet', label: 'Wallet', icon: Wallet },
-                    { key: 'notifications', label: 'Notifs', icon: Bell },
-                    { key: 'campaigns', label: 'Post Ads', icon: Megaphone },
-                    { key: 'referEarn', label: 'Referral', icon: Users },
-                    { key: 'profile', label: 'Profile', icon: UserCog },
-                    { key: 'aiPilot', label: 'AI Pilot', icon: Activity },
-                    { key: 'leaderboard', label: 'Ranking', icon: TrendingUp },
-                    { key: 'maintenance_mode', label: 'Safe Mode', icon: ShieldAlert },
+                    { key: 'homePage', label: 'Feed Display', icon: Activity },
+                    { key: 'wallet', label: 'Wallet Access', icon: Wallet },
+                    { key: 'notifications', label: 'Alert Center', icon: Bell },
+                    { key: 'campaigns', label: 'Ad Posting', icon: Megaphone },
+                    { key: 'referEarn', label: 'Refer & Earn', icon: Users },
+                    { key: 'profile', label: 'Profile/Settings', icon: UserCog },
+                    { key: 'aiPilot', label: 'Rexo AI Pilot', icon: Zap },
+                    { key: 'maintenance_mode', label: 'Maintenance Mode', icon: ShieldAlert },
                   ].map((item: any) => (
                     <div key={item.key} className="flex items-center justify-between group">
                       <div className="flex items-center gap-4">
@@ -508,6 +509,112 @@ export default function AdminPanel() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Detailed Campaign Modal */}
+      <AnimatePresence>
+        {selectedCampaign && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[2.5rem] p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative shadow-2xl"
+            >
+              <button 
+                onClick={() => setSelectedCampaign(null)}
+                className="absolute top-8 right-8 w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 active:scale-90 transition-all shadow-sm"
+              >
+                <ShieldAlert className="w-5 h-5 rotate-45" />
+              </button>
+
+              <div className="flex items-start gap-6 mb-8 mt-2">
+                <div className="w-32 h-32 rounded-[2rem] bg-gray-50 overflow-hidden shrink-0 border-4 border-white shadow-lg">
+                  {selectedCampaign.image ? <img src={selectedCampaign.image} className="w-full h-full object-cover" /> : <Megaphone className="w-12 h-12 text-gray-200" />}
+                </div>
+                <div className="flex-1 pt-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={cn(
+                      "text-[9px] px-3 py-1 rounded-full font-black uppercase tracking-widest",
+                      selectedCampaign.status === 'pending' ? 'bg-orange-100 text-orange-600' : 
+                      selectedCampaign.status === 'active' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
+                    )}>
+                      {selectedCampaign.status}
+                    </span>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{selectedCampaign.category}</span>
+                  </div>
+                  <h2 className="text-2xl font-black text-gray-900 tracking-tight leading-tight">{selectedCampaign.title}</h2>
+                  <p className="text-sm font-bold text-indigo-600 mt-1">by {selectedCampaign.brandName || 'Brand'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 mb-8">
+                <div className="p-4 bg-gray-50 rounded-3xl">
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Budget</span>
+                  <span className="text-sm font-black text-[#0A3D91]">{selectedCampaign.budget}</span>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-3xl">
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Type</span>
+                  <span className="text-sm font-black text-indigo-600">{selectedCampaign.campaignType}</span>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-3xl">
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Platform</span>
+                  <span className="text-sm font-black text-amber-600">{selectedCampaign.platform}</span>
+                </div>
+              </div>
+
+              <div className="space-y-6 mb-10">
+                <section>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">About Campaign</h4>
+                  <div className="p-5 bg-indigo-50/30 rounded-3xl border border-indigo-50/50">
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap font-medium">{selectedCampaign.description}</p>
+                  </div>
+                </section>
+
+                <section>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Creator Requirements</h4>
+                  <div className="p-5 bg-amber-50/30 rounded-3xl border border-amber-50/50">
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap font-medium">{selectedCampaign.requirements || 'No specific requirements listed.'}</p>
+                  </div>
+                </section>
+
+                <section className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-rose-50 rounded-3xl border border-rose-100">
+                     <span className="text-[9px] font-bold text-rose-500 uppercase tracking-widest block mb-1">Timeline</span>
+                     <span className="text-sm font-black text-rose-700">{selectedCampaign.timeline}</span>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-3xl border border-blue-100">
+                     <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest block mb-1">Region</span>
+                     <span className="text-sm font-black text-blue-700">{selectedCampaign.location}</span>
+                  </div>
+                </section>
+              </div>
+
+              {selectedCampaign.status === 'pending' && (
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => {
+                        updateCampaignStatus(selectedCampaign.id, 'active');
+                        setSelectedCampaign(null);
+                    }}
+                    className="flex-1 py-5 bg-emerald-500 text-white rounded-[1.5rem] text-[12px] font-black uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/30 active:scale-95 transition-all"
+                  >
+                    Set as Active
+                  </button>
+                  <button 
+                    onClick={() => {
+                        updateCampaignStatus(selectedCampaign.id, 'rejected');
+                        setSelectedCampaign(null);
+                    }}
+                    className="flex-1 py-5 bg-red-50 text-red-600 border border-red-100 rounded-[1.5rem] text-[12px] font-black uppercase tracking-[0.2em] hover:bg-red-100 active:scale-95 transition-all"
+                  >
+                    Reject Ad
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Footer Branding */}
       <footer className="shrink-0 py-3 bg-white border-t border-gray-100 flex justify-center items-center gap-2">

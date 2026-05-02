@@ -583,7 +583,7 @@ export default function CampaignDetail() {
 
       {/* Action Zone for Creators */}
       {role === 'creator' && (
-        <section className="fixed bottom-[100px] left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t border-gray-100 z-50 max-w-2xl mx-auto rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+        <section className="sticky bottom-6 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border border-gray-100 z-40 max-w-2xl mx-auto rounded-[2rem] shadow-2xl shadow-black/10 mx-1 mb-8">
         <div className="flex gap-4">
           {!application ? (
             <button 
