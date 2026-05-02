@@ -19,6 +19,9 @@ export default function Auth() {
   const [role, setRole] = useState<'creator' | 'brand'>('creator');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [userName, setUserName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
@@ -32,6 +35,11 @@ export default function Auth() {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
+        if (password !== passwordConfirmation) {
+          setError('Passwords do not match');
+          setLoading(false);
+          return;
+        }
         const res = await createUserWithEmailAndPassword(auth, email, password);
         
         const userPath = `users/${res.user.uid}`;
@@ -40,8 +48,10 @@ export default function Auth() {
             uid: res.user.uid,
             email: res.user.email,
             role,
+            fullName,
+            userName,
             createdAt: new Date().toISOString(),
-            displayName: email.split('@')[0]
+            displayName: fullName || userName || email.split('@')[0]
           });
         } catch (error) {
           handleFirestoreError(error, OperationType.WRITE, userPath);
@@ -162,7 +172,7 @@ export default function Auth() {
             <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center text-white">
               <Zap className="w-6 h-6 fill-white" />
             </div>
-            <span className="font-display font-bold text-2xl text-white tracking-tight">Rexocollab</span>
+            <span className="font-display font-bold text-2xl text-white tracking-tight">Rexotool</span>
           </div>
 
           <h2 className="text-5xl font-display font-bold text-white leading-tight max-w-md">
@@ -199,7 +209,7 @@ export default function Auth() {
             <div className="w-6 h-6 bg-brand-primary rounded-lg flex items-center justify-center text-white">
               <Zap className="w-3.5 h-3.5 fill-white" />
             </div>
-            <span className="font-display font-bold text-lg tracking-tight">Rexocollab</span>
+            <span className="font-display font-bold text-lg tracking-tight">Rexotool</span>
           </div>
 
           <div className="mb-8">
@@ -211,33 +221,48 @@ export default function Auth() {
             </p>
           </div>
 
-          <AnimatePresence mode="wait">
-            {!isLogin && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="grid grid-cols-2 gap-3 mb-8"
-              >
+          <div className="grid grid-cols-2 gap-3 mb-8">
                 <button 
                   onClick={() => setRole('creator')}
                   className={`p-3 rounded-2xl border transition-all text-center group ${role === 'creator' ? 'border-brand-primary bg-brand-primary/5 ring-1 ring-brand-primary' : 'border-gray-200 text-gray-400 opacity-60'}`}
                 >
                   <div className={`font-bold ${role === 'creator' ? 'text-brand-primary' : ''}`}>Creator</div>
-                  <div className="text-[10px] font-semibold uppercase tracking-widest">Find Direct Deals</div>
                 </button>
                 <button 
                   onClick={() => setRole('brand')}
                   className={`p-3 rounded-2xl border transition-all text-center group ${role === 'brand' ? 'border-brand-primary bg-brand-primary/5 ring-1 ring-brand-primary' : 'border-gray-200 text-gray-400 opacity-60'}`}
                 >
                   <div className={`font-bold ${role === 'brand' ? 'text-brand-primary' : ''}`}>Brand</div>
-                  <div className="text-[10px] font-semibold uppercase tracking-widest">Global Talent Search</div>
                 </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </div>
 
           <form onSubmit={handleAuth} className="space-y-3">
+            {!isLogin && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-semibold text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
+                  <input 
+                    type="text" 
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all shadow-sm text-sm"
+                    placeholder="Enter full name"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-semibold text-gray-400 uppercase tracking-widest ml-1">Username</label>
+                  <input 
+                    type="text" 
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all shadow-sm text-sm"
+                    placeholder="Enter username"
+                    required
+                  />
+                </div>
+              </>
+            )}
             <div className="space-y-1.5">
               <label className="text-[9px] font-semibold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
               <div className="relative group">
@@ -274,10 +299,26 @@ export default function Auth() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-white border border-gray-200 rounded-xl pl-10 pr-3.5 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all shadow-sm text-sm"
                   placeholder="••••••••"
-                  required={isLogin}
+                  required
                 />
               </div>
             </div>
+            {!isLogin && (
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-semibold text-gray-400 uppercase tracking-widest ml-1">Confirm Password</label>
+                  <div className="relative group">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-brand-primary transition-colors" />
+                    <input 
+                      type="password" 
+                      value={passwordConfirmation}
+                      onChange={(e) => setPasswordConfirmation(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-xl pl-10 pr-3.5 py-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all shadow-sm text-sm"
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+                </div>
+            )}
 
             {error && (
               <div className="p-2.5 bg-red-50 text-red-500 text-[10px] rounded-lg border border-red-100 font-medium">
