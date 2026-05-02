@@ -4,6 +4,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db, getDocFromServerWithRetry } from './lib/firebase';
 import { doc } from 'firebase/firestore';
 import { isAdminEmail } from './constants';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 // Pages
 import DashboardLayout from './components/DashboardLayout';
@@ -109,6 +110,7 @@ export default function App() {
           <Route path="admin" element={<AdminPanel />} />
         </Route>
       </Routes>
+      <SpeedInsights />
     </BrowserRouter>
   );
 }
