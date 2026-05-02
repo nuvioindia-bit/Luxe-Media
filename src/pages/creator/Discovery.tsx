@@ -24,24 +24,46 @@ export default function Discovery() {
   const [loading, setLoading] = useState(true);
   const [campaigns, setCampaigns] = useState<any[]>([]);
 
-  const categories = ['All', 'Music', 'Logo', 'Clippings', 'UGC'];
+  const categories = ['All', 'Meme', 'Tech', 'Comedy', 'Sports', 'Vlog'];
 
   useEffect(() => {
+    let active = true;
+    const safetyTimeout = setTimeout(() => {
+      if (active && loading) {
+        console.warn("Discovery fetch safety timeout triggered");
+        setLoading(false);
+      }
+    }, 6000); // 6s safety timeout
+
     async function fetchCampaigns() {
       setLoading(true);
       const campaignsPath = 'campaigns';
       try {
         const q = query(collection(db, campaignsPath), where('status', '==', 'active'));
         const snapshot = await getDocs(q);
+        if (!active) return;
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setCampaigns(data);
-      } catch (error) {
-        handleFirestoreError(error, OperationType.LIST, campaignsPath);
+      } catch (error: any) {
+        if (active) {
+          if (!error.message?.includes('offline')) {
+              handleFirestoreError(error, OperationType.LIST, campaignsPath);
+          } else {
+              console.warn("Discovery fetch failed (offline)");
+          }
+        }
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+          clearTimeout(safetyTimeout);
+        }
       }
     }
     fetchCampaigns();
+    return () => {
+      active = false;
+      clearTimeout(safetyTimeout);
+    };
   }, []);
 
   const filtered = campaigns.filter(c => 
@@ -125,8 +147,8 @@ export default function Discovery() {
                     {campaign.cpm > 0 && (
                         <div className="absolute bottom-3 left-3">
                             <div className="bg-black/60 backdrop-blur-md px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white tracking-wide shadow-lg flex items-center gap-1 border border-white/10">
-                                <DollarSign className="w-3 h-3 text-emerald-400" />
-                                CPM: ${campaign.cpm}/1k views
+                                <span className="text-emerald-400">₹</span>
+                                {(campaign.campaignType === 'Music' || campaign.campaignType === 'UGC') ? 'Per Post' : 'CPM'}: {campaign.cpm}
                             </div>
                         </div>
                     )}

@@ -19,7 +19,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc, onSnapshot, runTransaction, deleteDoc } from 'firebase/firestore';
-import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db, auth, handleFirestoreError, OperationType, getDocFromServerWithRetry } from '../lib/firebase';
 import { cn } from '../lib/utils';
 
 export default function CampaignDetail() {
@@ -112,14 +112,28 @@ export default function CampaignDetail() {
         // Fetch User Role - Fix for Admin detection
         const isAdminUser = auth.currentUser?.email === 'job.rexoagency@gmail.com';
         
-        const userDoc = await getDoc(doc(db, 'users', auth.currentUser!.uid));
-        const userRole = isAdminUser ? 'admin' : userDoc.data()?.role;
-        setRole(userRole);
+        let userRole = isAdminUser ? 'admin' : null;
+        
+        try {
+          const userDoc = await getDocFromServerWithRetry(doc(db, 'users', auth.currentUser!.uid));
+          if (userDoc.exists() && !userRole) {
+            userRole = (userDoc.data() as any)?.role;
+          }
+        } catch (err: any) {
+          console.warn("Failed to fetch user role (offline fallback):", err.message);
+        }
+        
+        setRole(userRole || 'creator');
 
         // Fetch Campaign
-        const campaignDoc = await getDoc(doc(db, 'campaigns', id));
-        if (campaignDoc.exists()) {
-          setCampaign({ id: campaignDoc.id, ...campaignDoc.data() });
+        try {
+          const campaignDoc = await getDocFromServerWithRetry(doc(db, 'campaigns', id));
+          if (campaignDoc.exists()) {
+            const data = campaignDoc.data() as any;
+            setCampaign({ id: campaignDoc.id, ...data });
+          }
+        } catch (err: any) {
+          console.warn("Failed to fetch campaign details (offline fallback):", err.message);
         }
 
         // Perspective-based fetching
@@ -251,7 +265,7 @@ export default function CampaignDetail() {
   }
 
   return (
-    <div className="space-y-6 pb-24 max-w-2xl mx-auto">
+    <div className="space-y-6 pb-64 max-w-2xl mx-auto">
       {/* Header */}
       <header className="flex items-center justify-between gap-4 px-1">
         <div className="flex items-center gap-4">
@@ -290,7 +304,21 @@ export default function CampaignDetail() {
       <div className="grid grid-cols-2 gap-3">
         {[
           { icon: DollarSign, label: 'Total Budget', value: campaign.budget, color: 'text-brand-primary', bg: 'bg-blue-50' },
-          { icon: Zap, label: 'CPM', value: `₹${campaign.cpm || 0}`, color: 'text-brand-accent', bg: 'bg-rose-50' },
+          { 
+            icon: (props: any) => (
+              <img 
+                {...props}
+                src="https://i.postimg.cc/DyJxL7mx/file-0000000008cc720b9d91dbcfd5fecf45.png" 
+                alt="Logo" 
+                className={cn("object-contain", props.className)}
+                referrerPolicy="no-referrer"
+              />
+            ), 
+            label: (campaign.campaignType === 'Music' || campaign.campaignType === 'UGC') ? 'Per Post' : 'CPM', 
+            value: `₹${campaign.cpm || 0}`, 
+            color: 'text-brand-accent', 
+            bg: 'bg-white' 
+          },
           { icon: Calendar, label: 'Timeline', value: campaign.timeline, color: 'text-amber-500', bg: 'bg-amber-50' },
           { icon: MapPin, label: 'Location', value: campaign.location, color: 'text-green-500', bg: 'bg-green-50' }
         ].map((stat, i) => (
@@ -543,14 +571,21 @@ export default function CampaignDetail() {
 
       {/* Action Zone for Creators */}
       {role === 'creator' && (
-        <section className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-gray-100 z-50">
-        <div className="max-w-2xl mx-auto flex gap-4">
+        <section className="fixed bottom-[100px] left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t border-gray-100 z-50 max-w-2xl mx-auto rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+        <div className="flex gap-4">
           {!application ? (
             <button 
               onClick={() => setShowApplyModal(true)}
               className="premium-button-primary flex-1 flex items-center justify-center gap-2"
             >
-              <Zap className="w-5 h-5 fill-white" /> Join Campaign
+              <div className="w-5 h-5 rounded-md overflow-hidden bg-white flex items-center justify-center">
+                <img 
+                  src="https://i.postimg.cc/DyJxL7mx/file-0000000008cc720b9d91dbcfd5fecf45.png" 
+                  alt="Logo" 
+                  className="w-full h-full object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div> Join Campaign
             </button>
           ) : (
             <div className="flex-1 flex flex-col gap-3">
@@ -732,10 +767,11 @@ export default function CampaignDetail() {
                     <div className="flex-1">
                         <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 block">Category</label>
                         <select required className="premium-input w-full appearance-none bg-white font-medium text-sm" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})}>
-                            <option value="Music">Music</option>
-                            <option value="Logo">Logo</option>
-                            <option value="Clippings">Clippings</option>
-                            <option value="UGC">UGC</option>
+                            <option value="Meme">Meme</option>
+                            <option value="Tech">Tech</option>
+                            <option value="Comedy">Comedy</option>
+                            <option value="Sports">Sports</option>
+                            <option value="Vlog">Vlog</option>
                         </select>
                     </div>
                  </div>
@@ -750,7 +786,9 @@ export default function CampaignDetail() {
                         </select>
                     </div>
                     <div className="flex-1">
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 block">CPM ($/1k views)</label>
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 block">
+                           {(editForm.campaignType === 'Music' || editForm.campaignType === 'UGC') ? 'Per Post Budget (₹)' : 'CPM (₹/1k views)'}
+                        </label>
                         <input required type="number" step="0.01" min="0.01" className="premium-input w-full" value={editForm.cpm} onChange={e => setEditForm({...editForm, cpm: e.target.value})} />
                     </div>
                  </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { auth, db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { auth, db, storage, handleFirestoreError, OperationType, getDocFromServerWithRetry } from '../lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { User, sendPasswordResetEmail } from 'firebase/auth';
 import { 
@@ -35,15 +35,39 @@ export default function Profile() {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!auth.currentUser) return;
+      if (!auth.currentUser) {
+        setLoading(false);
+        return;
+      }
+
+      // Pre-populate with auth data so the UI isn't empty if fetch hangs or fails
+      const fallbackProfile = {
+        uid: auth.currentUser.uid,
+        email: auth.currentUser.email || '',
+        displayName: auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'User',
+        photoURL: auth.currentUser.photoURL || '',
+        role: 'creator',
+        createdAt: new Date().toISOString()
+      };
+      
+      setProfile(fallbackProfile);
+
       const path = `users/${auth.currentUser.uid}`;
       try {
-        const userDoc = await getDoc(doc(db, path));
+        // Use the robust fetch helper
+        const userDoc = await getDocFromServerWithRetry(doc(db, path));
         if (userDoc.exists()) {
             setProfile(userDoc.data());
+        } else {
+            console.warn("Profile document missing, automatically initializing...");
+            // Automatically initialize the document if it doesn't exist
+            await updateDoc(doc(db, path), fallbackProfile).catch(async () => {
+                const { setDoc } = await import('firebase/firestore');
+                await setDoc(doc(db, path), fallbackProfile, { merge: true });
+            });
         }
-      } catch (error) {
-        handleFirestoreError(error, OperationType.GET, path);
+      } catch (error: any) {
+        console.warn("Profile fetch failed (using auth data):", error.message);
       } finally {
         setLoading(false);
       }
@@ -56,7 +80,10 @@ export default function Profile() {
     setSaving(true);
     const path = `users/${auth.currentUser.uid}`;
     try {
-      await updateDoc(doc(db, path), profile);
+      await updateDoc(doc(db, path), {
+        ...profile,
+        updatedAt: new Date().toISOString()
+      });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2000);
     } catch (error) {
@@ -128,14 +155,12 @@ export default function Profile() {
     }
   };
 
-  if (loading) return (
+  if (loading && !profile) return (
       <div className="py-20 text-center flex flex-col items-center">
           <div className="w-10 h-10 border-4 border-gray-100 border-t-brand-primary rounded-full animate-spin mb-4" />
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Accessing Identity</p>
       </div>
   );
-
-  if (!profile) return null;
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 pb-32">

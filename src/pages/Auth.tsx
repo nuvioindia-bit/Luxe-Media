@@ -104,49 +104,48 @@ export default function Auth() {
   };
 
   const signInWithGoogle = async () => {
+    setLoading(true);
+    setError('');
     const provider = new GoogleAuthProvider();
     try {
       const res = await signInWithPopup(auth, provider);
-      // Check if user exists, if not create
+      
+      // We perform high-speed optimistic setup
       const userPath = `users/${res.user.uid}`;
-      try {
-        await setDoc(doc(db, userPath), {
-          uid: res.user.uid,
-          email: res.user.email,
-          role, // Default to selected role if new
-          displayName: res.user.displayName,
-          photoURL: res.user.photoURL,
-          createdAt: new Date().toISOString()
-        }, { merge: true });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.WRITE, userPath);
-      }
-
-      // Initialize wallet if it doesn't exist
       const walletPath = `users/${res.user.uid}/wallet/balance`;
-      try {
-        const walletRef = doc(db, walletPath);
-        const walletSnap = await getDoc(walletRef);
-        if (!walletSnap.exists()) {
-          await setDoc(walletRef, {
+      
+      // Fire-and-forget background initialization
+      setDoc(doc(db, userPath), {
+        uid: res.user.uid,
+        email: res.user.email,
+        role: role || 'creator', 
+        displayName: res.user.displayName,
+        photoURL: res.user.photoURL,
+        createdAt: new Date().toISOString()
+      }, { merge: true }).catch(e => console.warn("Initial user doc fail:", e));
+
+      // Quick check/init for wallet
+      const walletRef = doc(db, walletPath);
+      getDoc(walletRef).then(snap => {
+        if (!snap.exists()) {
+          setDoc(walletRef, {
             userId: res.user.uid,
             balance: 0,
             totalEarned: 0,
             totalSpent: 0,
             currency: 'INR',
             updatedAt: new Date().toISOString()
-          });
+          }).catch(e => console.warn("Wallet init fail:", e));
         }
-      } catch (error) {
-        handleFirestoreError(error, OperationType.WRITE, walletPath);
-      }
+      }).catch(e => console.warn("Wallet check fail:", e));
+
+      // The onAuthStateChanged in App.tsx will handle the UI transition
+      // We don't call setLoading(false) here because we are about to be unmounted/redirected.
     } catch (err: any) {
-      try {
-        const parsed = JSON.parse(err.message);
-        setError(parsed.error || 'Authentication Failed');
-      } catch {
-        setError(err.message);
-      }
+      setLoading(false);
+      const message = err.message || 'Authentication Failed';
+      if (message.includes('popup-closed-by-user')) return;
+      setError(message);
     }
   };
 
@@ -158,11 +157,16 @@ export default function Auth() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-sm"
       >
-        <div className="flex items-center justify-center gap-1.5 mb-6">
-          <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center text-white">
-            <Zap className="w-5 h-5 fill-white" />
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden shadow-md border border-gray-100 bg-white">
+            <img 
+              src="https://i.postimg.cc/DyJxL7mx/file-0000000008cc720b9d91dbcfd5fecf45.png" 
+              alt="Logo" 
+              className="w-full h-full object-contain p-1"
+              referrerPolicy="no-referrer"
+            />
           </div>
-          <span className="font-display font-bold text-2xl tracking-tight">Rexotool</span>
+          <span className="font-display font-bold text-2xl tracking-tighter text-gray-900">Rexo Tool</span>
         </div>
 
         <div className="mb-8 text-center">

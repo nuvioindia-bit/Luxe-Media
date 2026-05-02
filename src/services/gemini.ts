@@ -5,7 +5,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 export async function askAIPilot(prompt: string, context?: any) {
   const model = "gemini-3-flash-preview";
   
-  const systemInstruction = `You are "Rexo AI", a highly intelligent assistant for an influencer marketing platform called Rexocollab.
+  const systemInstruction = `You are "Rexo Tool", a highly intelligent assistant for an influencer marketing platform called Rexocollab.
   Your goal is to help both Creators and Brands succeed.
   
   CONTEXT FOR THIS SESSION:
@@ -44,7 +44,7 @@ export async function askAIPilot(prompt: string, context?: any) {
 export async function* streamAIPilot(prompt: string, context?: any) {
     const model = "gemini-3-flash-preview";
     
-    const systemInstruction = `You are "Rexo AI", a highly intelligent assistant for an influencer marketing platform called Rexocollab.
+    const systemInstruction = `You are "Rexo Tool", a highly intelligent assistant for an influencer marketing platform called Rexocollab.
     Your goal is to help both Creators and Brands succeed.
     
     CONTEXT FOR THIS SESSION:

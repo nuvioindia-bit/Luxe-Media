@@ -136,7 +136,7 @@ export default function DashboardLayout({ user, role }: Props) {
     if (path.includes('discovery')) return 'Ad Discovery';
     if (path.includes('wallet')) return 'My Wallet';
     if (path.includes('create')) return 'Post Ad';
-    if (path.includes('ai-pilot')) return 'Rexo AI';
+    if (path.includes('ai-pilot')) return 'Rexo Tool';
     if (path.includes('admin')) return 'Admin Control House';
     if (path.includes('profile')) return 'Settings';
     return 'Dashboard';
@@ -146,12 +146,17 @@ export default function DashboardLayout({ user, role }: Props) {
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col font-sans">
       {/* Top Header - Glass Effect */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-3 py-2 flex justify-between items-center transition-all duration-300">
-        <div className="flex items-center gap-1.5">
-          <div className="w-6 h-6 bg-brand-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-primary/20">
-            <Zap className="w-3.5 h-3.5 fill-white" />
+        <div className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/dashboard')}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden shadow-sm border border-gray-100 bg-white">
+            <img 
+              src="https://i.postimg.cc/DyJxL7mx/file-0000000008cc720b9d91dbcfd5fecf45.png" 
+              alt="Logo" 
+              className="w-full h-full object-contain"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <div>
-            <h1 className="text-[11px] font-display font-bold leading-none mb-0.5">{getPageTitle()}</h1>
+            <h1 className="text-[11px] font-display font-bold leading-none mb-0.5">Rexo Tool</h1>
             <p className="text-[8px] font-semibold text-gray-400 uppercase tracking-widest">{role} account</p>
           </div>
         </div>

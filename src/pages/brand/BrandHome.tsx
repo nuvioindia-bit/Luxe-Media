@@ -208,12 +208,12 @@ export default function BrandHome() {
                   <Search className="w-6 h-6 text-indigo-500" />
               </div>
               <h3 className="text-lg font-display font-bold text-indigo-900 mb-2">Smart Discovery</h3>
-              <p className="text-xs text-indigo-600/70 mb-6 font-medium leading-relaxed">Let Rexo AI find the perfect match for your campaign DNA.</p>
+              <p className="text-xs text-indigo-600/70 mb-6 font-medium leading-relaxed">Let Rexo Tool find the perfect match for your campaign DNA.</p>
               <button 
                 onClick={() => navigate('/dashboard/ai-pilot')}
                 className="w-full premium-button-primary bg-indigo-500 shadow-indigo-200 py-3 text-xs uppercase tracking-widest font-bold"
               >
-                Launch Rexo AI
+                Launch Rexo Tool
               </button>
             </section>
           )}

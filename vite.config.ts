@@ -9,18 +9,17 @@ export default defineConfig(({mode}) => {
     plugins: [react(), tailwindcss()],
     base: '/',
     define: {
-      'process.env': env,
-      'global': {}, // Ye line Express/Node errors ko rokne ke liye hai
+      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
-    build: {
-      rollupOptions: {
-        external: ['express'], // Express ko build se bahar nikaalo
-      },
+    server: {
+      // HMR is disabled in AI Studio via DISABLE_HMR env var.
+      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
+      hmr: process.env.DISABLE_HMR !== 'true',
     },
   };
 });

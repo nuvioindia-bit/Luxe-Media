@@ -32,7 +32,7 @@ export default function AIPilot() {
     {
       id: '1',
       role: 'assistant',
-      content: "Hello! I'm your **Rexo AI** assistant. How can I help you accelerate your growth today?\n\nI can help with:\n* Optimizing your brand brief\n* Suggesting content ideas for creators\n* Analyzing market trends\n* Talent matching strategy",
+      content: "Hello! I'm your **Rexo Tool** assistant. How can I help you accelerate your growth today?\n\nI can help with:\n* Optimizing your brand brief\n* Suggesting content ideas for creators\n* Analyzing market trends\n* Talent matching strategy",
       timestamp: new Date()
     }
   ]);
@@ -98,9 +98,16 @@ export default function AIPilot() {
   if (config.show_ai_pilot === false) {
     return (
       <div className="flex flex-col items-center justify-center p-20 text-center">
-        <Bot className="w-20 h-20 text-indigo-100 mb-6" />
-        <h1 className="text-3xl font-display font-bold text-gray-900">Rexo AI is Offline</h1>
-        <p className="text-gray-500 mt-2">The administrator has temporarily disabled the AI assistant. Please check back later.</p>
+        <div className="w-24 h-24 rounded-[2rem] flex items-center justify-center overflow-hidden shadow-xl border border-gray-100 bg-white mb-8">
+            <img 
+              src="https://i.postimg.cc/DyJxL7mx/file-0000000008cc720b9d91dbcfd5fecf45.png" 
+              alt="Logo" 
+              className="w-full h-full object-contain p-2"
+              referrerPolicy="no-referrer"
+            />
+        </div>
+        <h1 className="text-3xl font-display font-bold text-gray-900 tracking-tight">Rexo Tool is Offline</h1>
+        <p className="text-gray-500 mt-2 font-medium max-w-sm mx-auto">The administrator has temporarily disabled the AI assistant. Please check back later.</p>
       </div>
     );
   }
@@ -110,11 +117,16 @@ export default function AIPilot() {
       {/* Header Area */}
       <div className="px-6 py-4 bg-white border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
-            <Bot className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shadow-lg border border-gray-100 bg-white">
+            <img 
+              src="https://i.postimg.cc/DyJxL7mx/file-0000000008cc720b9d91dbcfd5fecf45.png" 
+              alt="Logo" 
+              className="w-full h-full object-contain p-1"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <div>
-            <h1 className="text-sm font-bold text-gray-900 leading-none">Rexo AI</h1>
+            <h1 className="text-sm font-bold text-gray-900 leading-none tracking-tight">Rexo Tool</h1>
             <div className="flex items-center gap-1 mt-0.5">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Online</span>
@@ -143,10 +155,17 @@ export default function AIPilot() {
               )}
             >
               <div className={cn(
-                "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-sm",
-                message.role === 'assistant' ? "bg-indigo-600 text-white" : "bg-white text-gray-400 border border-gray-100"
+                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm overflow-hidden border border-gray-100",
+                message.role === 'assistant' ? "bg-white" : "bg-white text-gray-400"
               )}>
-                {message.role === 'assistant' ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                {message.role === 'assistant' ? (
+                  <img 
+                    src="https://i.postimg.cc/DyJxL7mx/file-0000000008cc720b9d91dbcfd5fecf45.png" 
+                    alt="Logo" 
+                    className="w-full h-full object-contain p-1"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : <User className="w-4 h-4" />}
               </div>
               
               <div className={cn(
@@ -169,8 +188,13 @@ export default function AIPilot() {
             animate={{ opacity: 1 }}
             className="flex gap-3 max-w-[80%]"
           >
-            <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm">
-                <Bot className="w-4 h-4 text-white animate-pulse" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm overflow-hidden border border-gray-100 bg-white">
+                <img 
+                  src="https://i.postimg.cc/DyJxL7mx/file-0000000008cc720b9d91dbcfd5fecf45.png" 
+                  alt="Logo" 
+                  className="w-full h-full object-contain p-1 animate-pulse"
+                  referrerPolicy="no-referrer"
+                />
             </div>
             <div className="bg-white border border-gray-100 px-4 py-3 rounded-2xl shadow-sm rounded-tl-none">
                 <div className="flex gap-1">
@@ -203,7 +227,7 @@ export default function AIPilot() {
         <div className="relative">
           <input 
             type="text" 
-            placeholder="Ask Rexo AI..."
+            placeholder="Ask Rexo Tool..."
             className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 pr-14 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-100 transition-all text-xs font-bold shadow-inner"
             value={input}
             onChange={(e) => setInput(e.target.value)}

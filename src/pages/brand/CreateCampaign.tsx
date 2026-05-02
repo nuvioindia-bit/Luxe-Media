@@ -27,7 +27,7 @@ export default function CreateCampaign() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: 'Music',
+    category: 'Meme',
     campaignType: 'Logo',
     platform: 'Instagram',
     budget: '',
@@ -87,7 +87,7 @@ export default function CreateCampaign() {
     }
   };
 
-  const categories = ['Music', 'Logo', 'Clippings', 'UGC'];
+  const categories = ['Meme', 'Tech', 'Comedy', 'Sports', 'Vlog'];
   const campaignTypes = ['Logo', 'Music', 'Clippings', 'UGC'];
   const platforms = ['Instagram', 'YouTube', 'Facebook', 'TikTok'];
 
@@ -101,8 +101,12 @@ export default function CreateCampaign() {
       if (!formData.image) newErrors.image = "Cover image is required";
     }
     if (step === 2) {
-      if (!formData.cpm || parseFloat(formData.cpm) <= 0) newErrors.cpm = "Valid CPM required";
-      if (!formData.totalBudget || formData.totalBudget <= 0) newErrors.totalBudget = "Valid budget required";
+      if (formData.campaignType === 'Logo' || formData.campaignType === 'Clippings') {
+        if (!formData.cpm || parseFloat(formData.cpm) <= 0) newErrors.cpm = "Valid CPM required";
+      } else {
+        if (!formData.cpm || parseFloat(formData.cpm) <= 0) newErrors.cpm = "Per Post Budget required";
+      }
+      if (!formData.totalBudget || formData.totalBudget <= 0) newErrors.totalBudget = "Valid total budget required";
       if (!formData.timeline.trim()) newErrors.timeline = "Timeline is required";
     }
     if (step === 3) {
@@ -125,14 +129,19 @@ export default function CreateCampaign() {
     const isAdmin = auth.currentUser?.email === 'job.rexoagency@gmail.com';
     setLoading(true);
     try {
-      const campaignRef = await addDoc(collection(db, 'campaigns'), {
+      const campaignData = {
         ...formData,
+        budget: (formData.campaignType === 'Logo' || formData.campaignType === 'Clippings') 
+          ? `₹${formData.cpm} CPM` 
+          : `₹${Number(formData.cpm).toLocaleString()} / Post`,
         brandId: auth.currentUser.uid,
         brandName: isAdmin ? 'Rexo Administration' : (auth.currentUser.displayName || 'Brand'),
         brandEmail: auth.currentUser?.email,
         createdAt: serverTimestamp(),
         status: isAdmin ? 'active' : 'pending'
-      });
+      };
+
+      const campaignRef = await addDoc(collection(db, 'campaigns'), campaignData);
 
       if (!isAdmin) {
         // Notify Admin
@@ -337,29 +346,64 @@ export default function CreateCampaign() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(formData.campaignType === 'Logo' || formData.campaignType === 'Clippings') ? (
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">CPM (Cost Per 1k Views)</label>
+                      <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">₹</span>
+                          <input 
+                              type="number" 
+                              min="0"
+                              step="0.01"
+                              value={formData.cpm}
+                              onChange={(e) => {
+                                  const val = e.target.value;
+                                  setFormData({
+                                      ...formData, 
+                                      cpm: val, 
+                                      budget: `₹${val} CPM`
+                                  });
+                              }}
+                              className={cn(
+                                  "w-full bg-gray-50 border rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 transition-all font-medium text-xs",
+                                  errors.cpm ? "border-red-300 ring-red-50" : "border-gray-100 focus:ring-brand-primary/20 focus:border-brand-primary"
+                              )}
+                              placeholder="e.g. 50"
+                          />
+                      </div>
+                      {errors.cpm && <p className="text-[9px] font-bold text-red-500 mt-1 ml-1">{errors.cpm}</p>}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Per Post Budget (₹)</label>
+                      <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">₹</span>
+                          <input 
+                              type="number" 
+                              value={formData.cpm} // Reuse cpm field for the numeric value of per-post
+                              onChange={(e) => {
+                                  const val = e.target.value;
+                                  setFormData({
+                                      ...formData, 
+                                      cpm: val, 
+                                      budget: `₹${Number(val).toLocaleString()} / Post`
+                                  });
+                              }}
+                              className={cn(
+                                  "w-full bg-gray-50 border rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 transition-all font-medium text-xs",
+                                  errors.cpm ? "border-red-300 ring-red-50" : "border-gray-100 focus:ring-brand-primary/20 focus:border-brand-primary"
+                              )}
+                              placeholder="e.g. 1500"
+                          />
+                      </div>
+                      {errors.cpm && <p className="text-[9px] font-bold text-red-500 mt-1 ml-1">{errors.cpm}</p>}
+                  </div>
+                )}
+                
                 <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">CPM (Cost Per 1k Views)</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Total Campaign Budget (₹)</label>
                     <div className="relative">
-                        <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input 
-                            type="number" 
-                            min="0.01"
-                            step="0.01"
-                            value={formData.cpm}
-                            onChange={(e) => setFormData({...formData, cpm: e.target.value})}
-                            className={cn(
-                                "w-full bg-gray-50 border rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 transition-all font-medium text-xs",
-                                errors.cpm ? "border-red-300 ring-red-50" : "border-gray-100 focus:ring-brand-primary/20 focus:border-brand-primary"
-                            )}
-                            placeholder="e.g. 50"
-                        />
-                    </div>
-                    {errors.cpm && <p className="text-[9px] font-bold text-red-500 mt-1 ml-1">{errors.cpm}</p>}
-                </div>
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Total Budget (₹)</label>
-                    <div className="relative">
-                        <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">₹</span>
                         <input 
                             type="number" 
                             value={formData.totalBudget || ''}

@@ -45,7 +45,14 @@ export default function AdminPanel() {
   const [confirmPrompt, setConfirmPrompt] = useState<{ message: string, onConfirm: () => void } | null>(null);
 
   useEffect(() => {
-    if (auth.currentUser?.email !== 'job.rexoagency@gmail.com') return;
+    if (auth.currentUser?.email !== 'job.rexoagency@gmail.com') {
+      setLoading(false);
+      return;
+    }
+
+    const safetyTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
 
     const unsubConfig = onSnapshot(doc(db, 'app_config', 'main'), (doc) => {
       if (doc.exists()) setAppConfig(doc.data());
@@ -58,6 +65,7 @@ export default function AdminPanel() {
     const unsubUsers = onSnapshot(collection(db, 'users'), (snap) => {
       setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
+      clearTimeout(safetyTimeout);
     });
 
     const unsubCampaigns = onSnapshot(query(collection(db, 'campaigns'), orderBy('createdAt', 'desc')), (snap) => {
@@ -239,14 +247,19 @@ export default function AdminPanel() {
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-4rem)] bg-gray-950 rounded-2xl overflow-hidden mb-4 border border-gray-800 shadow-sm">
       {/* Sidebar */}
       <div className="w-full md:w-48 bg-gray-900 border-r border-gray-800 flex flex-col shrink-0">
-        <div className="p-3 border-b border-gray-800 flex flex-col items-center text-center">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-indigo-600/20 mb-1">
-                <ShieldCheck className="w-5 h-5" />
+        <div className="p-3 border-b border-gray-800 flex flex-col items-center text-center cursor-pointer" onClick={() => navigate('/dashboard')}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shadow-lg border border-gray-700 bg-gray-900 mb-2">
+                <img 
+                  src="https://i.postimg.cc/DyJxL7mx/file-0000000008cc720b9d91dbcfd5fecf45.png" 
+                  alt="Logo" 
+                  className="w-full h-full object-contain p-1"
+                  referrerPolicy="no-referrer"
+                />
             </div>
             <h2 className="text-base font-display font-black text-white tracking-tighter">
-                RexoCollab
+                Rexo Tool
             </h2>
-            <p className="text-[7px] text-indigo-400 font-black uppercase tracking-[0.2em]">Admin Centre</p>
+            <p className="text-[7px] text-indigo-400 font-black uppercase tracking-[0.2em]">Management Suite</p>
         </div>
         <nav className="flex md:flex-col overflow-x-auto md:overflow-visible px-1 py-1 gap-0.5 no-scrollbar shrink-0">
             {[
@@ -748,7 +761,7 @@ export default function AdminPanel() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {[
                 { id: 'show_trending', label: 'Trending Feed', desc: 'Toggle the featured horizontal campaign list.' },
-                { id: 'show_ai_pilot', label: 'Rexo AI Portal', desc: 'Platform-wide AI assistant visibility.' },
+                { id: 'show_ai_pilot', label: 'Rexo Tool Portal', desc: 'Platform-wide AI assistant visibility.' },
                 { id: 'show_market_insights', label: 'Market Analytics', desc: 'Show detailed dashboards to premium brands.' },
                 { id: 'allow_payments', label: 'Direct Payments', desc: 'Allow brands to fund wallets via platform.' },
                 { id: 'allow_withdrawals', label: 'Creator Withdrawals', desc: 'Enable withdrawal service for creators.' },

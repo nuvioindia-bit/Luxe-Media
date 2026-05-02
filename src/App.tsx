@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth, db } from './lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { auth, db, getDocFromServerWithRetry } from './lib/firebase';
+import { doc } from 'firebase/firestore';
 
 // Pages
 import DashboardLayout from './components/DashboardLayout';
@@ -21,34 +21,54 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Safety fallback: ensure loading is disabled eventually
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      
       if (firebaseUser) {
+        // Step 1: Set user immediately to remove login screen delay
+        setUser(firebaseUser);
+        
+        // Initial optimistic role based on email or default
+        const optimisticRole = firebaseUser.email === 'job.rexoagency@gmail.com' ? 'admin' : 'creator';
+        setRole(optimisticRole);
+        
+        // Stop the initial loading spinner so the user sees the dashboard
+        setLoading(false);
+        clearTimeout(safetyTimer);
+
+        // Step 2: Fetch full profile/banned status in the background
         try {
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          const userDoc = await getDocFromServerWithRetry(doc(db, 'users', firebaseUser.uid));
+          
           if (userDoc.exists()) {
-            const data = userDoc.data();
-            if (data.isBanned) {
+            const data = userDoc.data() as any;
+            
+            // Check if banned
+            if (data?.isBanned) {
               alert('Your account has been suspended by an administrator.');
               await auth.signOut();
               setUser(null);
               setRole(null);
-            } else {
-              setUser(firebaseUser);
+              return;
+            }
+            
+            // Update role if different from optimistic role
+            if (data?.role && data.role !== optimisticRole && firebaseUser.email !== 'job.rexoagency@gmail.com') {
               setRole(data.role);
             }
-          } else {
-             setUser(firebaseUser);
           }
         } catch (error) {
-          console.error("Failed to fetch user state:", error);
-          setUser(firebaseUser);
+          console.warn("Background profile fetch failed (using fallback state):", error);
         }
       } else {
         setUser(null);
         setRole(null);
+        clearTimeout(safetyTimer);
+        setLoading(false);
       }
-      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
