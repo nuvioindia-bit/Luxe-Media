@@ -8,18 +8,19 @@ export default defineConfig(({mode}) => {
   return {
     plugins: [react(), tailwindcss()],
     base: '/',
-    // Yeh line zaroori hai taaki Netlify ke variables code ko mil sakein
     define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env': env 
+      'process.env': env,
+      'global': {}, // Ye line Express/Node errors ko rokne ke liye hai
     },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
-    server: {
-      hmr: process.env.DISABLE_HMR !== 'true',
+    build: {
+      rollupOptions: {
+        external: ['express'], // Express ko build se bahar nikaalo
+      },
     },
   };
 });
