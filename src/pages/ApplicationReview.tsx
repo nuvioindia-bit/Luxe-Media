@@ -53,9 +53,9 @@ export default function ApplicationReview() {
       await addDoc(collection(db, 'notifications'), {
         recipientId: app.creatorId,
         type: 'application_status',
-        title: status === 'accepted' ? 'Application Accepted!' : 'Application Update',
+        title: status === 'accepted' ? 'Badhai ho! 🎉' : 'Application Update',
         message: status === 'accepted' 
-          ? `Great news! Your application for "${app.title}" has been accepted.`
+          ? `Badhai ho! Aapka application approve ho gaya hai. Ab aap content submit kar sakte hain.`
           : `Thank you for applying to "${app.title}". Unfortunately, the brand has decided not to move forward at this time.`,
         createdAt: serverTimestamp(),
         referenceId: app.campaignId,

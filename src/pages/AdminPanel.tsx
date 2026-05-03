@@ -57,6 +57,7 @@ export default function AdminPanel() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
+  const [adFilter, setAdFilter] = useState<'all' | 'pending' | 'active' | 'rejected'>('pending');
 
   useEffect(() => {
     const unsubUsers = onSnapshot(query(collection(db, 'users'), orderBy('createdAt', 'desc')), (snap) => {
@@ -108,13 +109,19 @@ export default function AdminPanel() {
   const updateCampaignStatus = async (id: string, status: string) => {
     try {
       setProcessingId(id);
-      await updateDoc(doc(db, 'campaigns', id), { status, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, 'campaigns', id), { 
+        status, 
+        updatedAt: serverTimestamp(),
+        approvedAt: status === 'active' ? serverTimestamp() : null
+      });
       const campaign = campaigns.find(c => c.id === id);
       if (campaign) {
         await addDoc(collection(db, 'notifications'), {
-          recipientId: campaign.creatorId || campaign.brandId,
-          title: status === 'active' ? 'Ad Activated' : 'Ad Rejected',
-          message: `Campaign "${campaign.title}" is now ${status === 'active' ? 'live' : 'rejected'}.`,
+          recipientId: campaign.brandId || campaign.creatorId,
+          title: status === 'active' ? '🚀 Campaign Approved' : '⚠️ Campaign Rejected',
+          message: status === 'active' 
+            ? `Your campaign "${campaign.title}" has been approved and is now live for creators!` 
+            : `Your campaign "${campaign.title}" was not approved. Please review our guidelines and try again.`,
           type: 'system',
           createdAt: serverTimestamp(),
           read: false,
@@ -146,9 +153,15 @@ export default function AdminPanel() {
   const filteredItems = useMemo(() => {
     const s = search.toLowerCase();
     if (activeTab === 'users') return users.filter(u => u.email?.toLowerCase().includes(s) || u.displayName?.toLowerCase().includes(s));
-    if (activeTab === 'ads') return campaigns.filter(c => c.title?.toLowerCase().includes(s));
+    if (activeTab === 'ads') {
+      return campaigns.filter(c => {
+        const matchesSearch = c.title?.toLowerCase().includes(s);
+        const matchesStatus = adFilter === 'all' || c.status === adFilter;
+        return matchesSearch && matchesStatus;
+      });
+    }
     return [];
-  }, [activeTab, search, users, campaigns]);
+  }, [activeTab, search, users, campaigns, adFilter]);
 
   const stats = {
     users: users.length,
@@ -371,6 +384,22 @@ export default function AdminPanel() {
                animate={{ opacity: 1, x: 0 }}
                className="space-y-2 pb-10"
              >
+                {/* Filter Sub-nav */}
+                <div className="flex gap-1 mb-2">
+                   {['pending', 'active', 'rejected', 'all'].map((f: any) => (
+                      <button
+                        key={f}
+                        onClick={() => setAdFilter(f)}
+                        className={cn(
+                          "px-2 py-1 rounded-md text-[7px] font-black uppercase tracking-widest transition-all border",
+                          adFilter === f ? "bg-slate-900 text-white border-slate-900 shadow-sm" : "bg-white text-gray-400 border-gray-100"
+                        )}
+                      >
+                         {f}
+                      </button>
+                   ))}
+                </div>
+
                 {filteredItems.map((c: any) => (
                    <div key={c.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm active:scale-[0.98] transition-all" onClick={() => setSelectedCampaign(c)}>
                       <div className="p-2.5 flex gap-2.5">
@@ -386,10 +415,13 @@ export default function AdminPanel() {
                                )}>
                                  {c.status}
                                </span>
-                               <span className="text-[6px] font-black text-slate-300 uppercase tracking-widest">{c.platform || 'System'}</span>
+                               <span className="text-[6px] font-black text-slate-300 uppercase tracking-widest">{c.brandName || 'System'}</span>
                             </div>
                             <h4 className="text-[10px] font-black text-slate-900 mt-1 truncate tracking-tight">{c.title}</h4>
-                            <div className="mt-0.5 text-blue-600 font-black text-[11px]">₹{c.reward || c.budget}</div>
+                            <div className="mt-0.5 flex items-center justify-between">
+                               <div className="text-blue-600 font-black text-[11px]">₹{c.reward || c.budget}</div>
+                               <span className="text-[6px] font-bold text-slate-300 uppercase shrink-0">{c.platform || 'General'}</span>
+                            </div>
                          </div>
                       </div>
                       {c.status === 'pending' && (
@@ -446,12 +478,29 @@ export default function AdminPanel() {
                     
                     <div className="grid grid-cols-2 gap-1.5 mb-3">
                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 shadow-inner">
+                          <span className="text-[6px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Partner Balance</span>
+                          <span className="text-[9px] font-black text-blue-600 tracking-tight">
+                            ₹{users.find(u => u.id === w.creatorId)?.balance || 0}
+                          </span>
+                       </div>
+                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 shadow-inner overflow-hidden">
+                          <span className="text-[6px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Partner Identity</span>
+                          <span className="text-[9px] font-black text-slate-800 truncate block tracking-tight">
+                            {users.find(u => u.id === w.creatorId)?.displayName || 'Unknown'}
+                          </span>
+                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5 mb-3">
+                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 shadow-inner">
                           <span className="text-[6px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Provider</span>
                           <span className="text-[9px] font-black text-slate-800 tracking-tight">{w.method || 'Digital Wallet'}</span>
                        </div>
                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 shadow-inner overflow-hidden">
-                          <span className="text-[6px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Dest. Address</span>
-                          <span className="text-[9px] font-black text-slate-800 truncate block tracking-tight">{w.target || 'System Node'}</span>
+                          <span className="text-[6px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Dest. Address / ID</span>
+                          <span className="text-[9px] font-black text-slate-600 truncate block tracking-tight font-mono select-all">
+                            {w.target || 'System Node'}
+                          </span>
                        </div>
                     </div>
 

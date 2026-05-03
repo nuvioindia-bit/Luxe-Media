@@ -122,12 +122,14 @@ service cloud.firestore {
       allow read: if canReadApp(resource.data) || isAdmin();
       allow create: if isSignedIn() && incoming().creatorId == request.auth.uid;
       allow update: if (isSignedIn() && (
-        // Creator update
-        (existing().creatorId == request.auth.uid && incoming().creatorId == existing().creatorId) ||
-        // Brand update (e.g., status)
+        // Creator update (submission)
+        (existing().creatorId == request.auth.uid && 
+         incoming().diff(existing()).affectedKeys().hasAll(['status', 'submissionLink', 'submittedAt']) &&
+         incoming().status == 'under_review') ||
+        // Brand update (approval/payment)
         (exists(/databases/$(database)/documents/campaigns/$(existing().campaignId)) && 
          get(/databases/$(database)/documents/campaigns/$(existing().campaignId)).data.brandId == request.auth.uid && 
-         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'paidAt']))
+         incoming().diff(existing()).affectedKeys().hasAny(['status', 'paidAt', 'updatedAt']))
       )) || isAdmin();
       allow delete: if isAdmin();
     }

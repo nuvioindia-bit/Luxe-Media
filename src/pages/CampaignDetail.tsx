@@ -14,6 +14,7 @@ import {
   MessageCircle,
   AlertCircle,
   AlertTriangle,
+  ExternalLink,
   X,
   Pencil,
   Trash2
@@ -38,6 +39,7 @@ export default function CampaignDetail() {
 
   // Apply Form State
   const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [applyForm, setApplyForm] = useState({
     name: '',
     location: '',
@@ -206,8 +208,8 @@ export default function CampaignDetail() {
       await addDoc(collection(db, 'notifications'), {
         recipientId: campaign.brandId,
         type: 'application',
-        title: 'New Talent Application',
-        message: `${applyForm.name || auth.currentUser?.email} has applied to your campaign "${campaign.title}"`,
+        title: 'Naya Application 🚀',
+        message: `Naya Application: ${applyForm.name || auth.currentUser?.email} ne aapke ${campaign.title} ke liye apply kiya hai.`,
         createdAt: serverTimestamp(),
         referenceId: docRef.id,
         read: false
@@ -378,15 +380,20 @@ export default function CampaignDetail() {
           <div className="flex gap-4">
             <button 
               onClick={async () => {
-                await updateDoc(doc(db, 'campaigns', campaign.id), { status: 'active' });
+                await updateDoc(doc(db, 'campaigns', campaign.id), { 
+                    status: 'active',
+                    updatedAt: serverTimestamp(),
+                    approvedAt: serverTimestamp()
+                });
                 // Notify Brand
                 await addDoc(collection(db, 'notifications'), {
                   recipientId: campaign.brandId,
-                  type: 'status_update',
-                  title: 'Campaign Approved!',
-                  message: `Your campaign "${campaign.title}" has been approved and is now live.`,
+                  type: 'system',
+                  title: '🚀 Campaign Approved',
+                  message: `Your campaign "${campaign.title}" has been approved and is now live for creators!`,
                   createdAt: serverTimestamp(),
-                  read: false
+                  read: false,
+                  referenceId: campaign.id
                 });
                 setCampaign({...campaign, status: 'active'});
               }}
@@ -396,15 +403,19 @@ export default function CampaignDetail() {
             </button>
             <button 
                onClick={async () => {
-                await updateDoc(doc(db, 'campaigns', campaign.id), { status: 'rejected' });
+                await updateDoc(doc(db, 'campaigns', campaign.id), { 
+                    status: 'rejected',
+                    updatedAt: serverTimestamp()
+                });
                 // Notify Brand
                 await addDoc(collection(db, 'notifications'), {
                   recipientId: campaign.brandId,
-                  type: 'status_update',
-                  title: 'Campaign Rejected',
-                  message: `Your campaign "${campaign.title}" was not approved. Please review our guidelines.`,
+                  type: 'system',
+                  title: '⚠️ Campaign Rejected',
+                  message: `Your campaign "${campaign.title}" was not approved. Please review our guidelines and try again.`,
                   createdAt: serverTimestamp(),
-                  read: false
+                  read: false,
+                  referenceId: campaign.id
                 });
                 setCampaign({...campaign, status: 'rejected'});
               }}
@@ -480,40 +491,10 @@ export default function CampaignDetail() {
                 {app.status === 'pending' && (
                   <div className="flex gap-2">
                     <button 
-                      onClick={async () => {
-                        await updateDoc(doc(db, 'applications', app.id), { status: 'accepted' });
-                        // Notify Creator
-                        await addDoc(collection(db, 'notifications'), {
-                            recipientId: app.creatorId,
-                            type: 'application_status',
-                            title: 'Application Accepted!',
-                            message: `Congratulations! Your application for "${campaign.title}" was accepted.`,
-                            createdAt: serverTimestamp(),
-                            referenceId: campaign.id,
-                            read: false
-                        });
-                      }}
-                      className="flex-1 py-2 bg-green-500 text-white rounded-lg text-[10px] font-bold"
+                      onClick={() => navigate(`/dashboard/review/${app.id}`)}
+                      className="flex-1 py-2 bg-slate-900 text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-2"
                     >
-                      Accept
-                    </button>
-                    <button 
-                      onClick={async () => {
-                        await updateDoc(doc(db, 'applications', app.id), { status: 'rejected' });
-                        // Notify Creator
-                        await addDoc(collection(db, 'notifications'), {
-                            recipientId: app.creatorId,
-                            type: 'application_status',
-                            title: 'Application Update',
-                            message: `Thank you for your interest. Unfortunately, your application for "${campaign.title}" was not selected.`,
-                            createdAt: serverTimestamp(),
-                            referenceId: campaign.id,
-                            read: false
-                        });
-                      }}
-                      className="flex-1 py-2 bg-red-50 text-red-500 border border-red-100 rounded-lg text-[10px] font-bold"
-                    >
-                      Reject
+                      Review Application <ExternalLink size={12} />
                     </button>
                   </div>
                 )}
@@ -608,25 +589,37 @@ export default function CampaignDetail() {
                    </div>
                 )}
                 {application.status === 'accepted' && (
-                    <form onSubmit={handleSubmitContent} className="flex gap-2">
-                        <div className="flex-1 relative">
-                            <input 
-                                type="url"
-                                placeholder="Paste proof link (Post/Reel)"
-                                className="w-full h-full bg-blue-50/50 border border-blue-100 rounded-[1.75rem] pl-5 pr-4 text-[11px] font-bold text-blue-900 focus:ring-4 focus:ring-blue-500/10 outline-none placeholder:text-blue-300 transition-all"
-                                value={submissionLink}
-                                onChange={e => setSubmissionLink(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <button 
-                            type="submit"
-                            disabled={submitting}
-                            className="w-14 h-14 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-brand-primary/20 active:scale-90 transition-all shrink-0"
-                        >
-                            {submitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Upload size={20} />}
-                        </button>
-                    </form>
+                    <div className="flex-1 space-y-3">
+                        {!showSubmitForm ? (
+                            <button 
+                                onClick={() => setShowSubmitForm(true)}
+                                className="w-full bg-emerald-500 text-white py-4 rounded-[1.75rem] text-[13px] font-black uppercase tracking-[0.1em] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl shadow-emerald-500/20"
+                            >
+                                <Upload size={18} className="animate-bounce" /> Submit Work / Upload Content
+                            </button>
+                        ) : (
+                            <form onSubmit={handleSubmitContent} className="flex gap-2">
+                                <div className="flex-1 relative">
+                                    <input 
+                                        type="url"
+                                        placeholder="Paste content link (Instagram/YouTube)"
+                                        className="w-full h-14 bg-white border-2 border-emerald-500/20 rounded-[1.75rem] pl-5 pr-4 text-[11px] font-bold text-gray-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                                        value={submissionLink}
+                                        onChange={e => setSubmissionLink(e.target.value)}
+                                        required
+                                        autoFocus
+                                    />
+                                </div>
+                                <button 
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="w-14 h-14 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-90 transition-all shrink-0"
+                                >
+                                    {submitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle2 size={24} />}
+                                </button>
+                            </form>
+                        )}
+                    </div>
                 )}
                 {application.status === 'under_review' && (
                    <div className="flex items-center gap-3 bg-blue-50/50 border border-blue-100 rounded-[1.75rem] p-1 pr-4">
