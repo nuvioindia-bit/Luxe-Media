@@ -4,6 +4,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db, getDocFromServerWithRetry } from './lib/firebase';
 import { doc } from 'firebase/firestore';
 import { isAdminEmail } from './constants';
+import { App as CapApp } from '@capacitor/app';
 
 // Pages
 import DashboardLayout from './components/DashboardLayout';
@@ -25,6 +26,21 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Handle Android Back Button
+    const backListener = CapApp.addListener('backButton', ({ canGoBack }) => {
+      if (!canGoBack) {
+        CapApp.exitApp();
+      } else {
+        window.history.back();
+      }
+    });
+
+    return () => {
+      backListener.then(l => l.remove());
+    };
+  }, []);
 
   useEffect(() => {
     // Safety fallback: ensure loading is disabled eventually
