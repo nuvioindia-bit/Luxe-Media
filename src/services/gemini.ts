@@ -4,9 +4,12 @@ let genAI: GoogleGenAI | null = null;
 
 function getAI() {
   if (!genAI) {
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Try Vite env first (Vercel client side), then process.env (AI Studio environment)
+    const apiKey = import.meta.env?.VITE_GEMINI_API_KEY || (typeof process !== 'undefined' ? process.env?.GEMINI_API_KEY : null);
+    
     if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is not defined in environment variables");
+      console.warn("GEMINI_API_KEY is not defined. AI features will be limited.");
+      return null;
     }
     genAI = new GoogleGenAI({ apiKey });
   }
@@ -14,7 +17,7 @@ function getAI() {
 }
 
 export async function askAIPilot(prompt: string, context?: any) {
-  const model = "gemini-3-flash-preview";
+  const model = "gemini-1.5-flash";
   
   const systemInstruction = `You are "Rexo Tool", a highly intelligent assistant for an influencer marketing platform called Rexocollab.
   Your goal is to help both Creators and Brands succeed.
@@ -37,6 +40,8 @@ export async function askAIPilot(prompt: string, context?: any) {
 
   try {
     const ai = getAI();
+    if (!ai) return "I need an API Key to function correctly on your custom deployment. Please set VITE_GEMINI_API_KEY in your environment.";
+    
     const response = await ai.models.generateContent({
       model: model,
       contents: prompt,
@@ -54,7 +59,7 @@ export async function askAIPilot(prompt: string, context?: any) {
 }
 
 export async function* streamAIPilot(prompt: string, context?: any) {
-    const model = "gemini-3-flash-preview";
+    const model = "gemini-1.5-flash";
     
     const systemInstruction = `You are "Rexo Tool", a highly intelligent assistant for an influencer marketing platform called Rexocollab.
     Your goal is to help both Creators and Brands succeed.
@@ -66,6 +71,11 @@ export async function* streamAIPilot(prompt: string, context?: any) {
 
     try {
         const ai = getAI();
+        if (!ai) {
+            yield "API Key is missing. Please configure VITE_GEMINI_API_KEY for Vercel deployment.";
+            return;
+        }
+        
         const streamResponse = await ai.models.generateContentStream({
             model: model,
             contents: prompt,

@@ -12,12 +12,13 @@ import {
   MoreVertical,
   ChevronRight,
   Wallet as WalletIcon,
-  TrendingUp
+  TrendingUp,
+  Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { auth, db, handleFirestoreError, OperationType } from '../../lib/firebase';
-import { collection, query, where, getDocs, orderBy, onSnapshot, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { useAppConfig } from '../../hooks/useAppConfig';
 
 export default function BrandHome() {
@@ -31,6 +32,19 @@ export default function BrandHome() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [pendingApps, setPendingApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const handleDeleteCampaign = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this campaign? This action cannot be undone.")) return;
+    try {
+      setLoading(true);
+      await deleteDoc(doc(db, 'campaigns', id));
+      setCampaigns(prev => prev.filter(c => c.id !== id));
+    } catch (error: any) {
+       handleFirestoreError(error, OperationType.DELETE, `campaigns/${id}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -191,15 +205,27 @@ export default function BrandHome() {
                                         </div>
                                     </div>
                                 </div>
-                            <div className={cn(
-                                "px-1.5 py-0.5 rounded-md text-[8px] font-bold uppercase tracking-widest border",
-                                item.status === 'pending' ? "bg-amber-50 text-amber-600 border-amber-100" :
-                                item.status === 'active' ? "bg-green-50 text-green-600 border-green-100" :
-                                item.status === 'rejected' ? "bg-red-50 text-red-600 border-red-100" :
-                                "bg-gray-50 text-gray-500 border-gray-100"
-                            )}>
-                                {item.status || 'Active'}
-                            </div>
+                                <div className="flex items-center gap-2">
+                                    <div className={cn(
+                                        "px-1.5 py-0.5 rounded-md text-[8px] font-bold uppercase tracking-widest border",
+                                        item.status === 'pending' ? "bg-amber-50 text-amber-600 border-amber-100" :
+                                        item.status === 'active' ? "bg-green-50 text-green-600 border-green-100" :
+                                        item.status === 'rejected' ? "bg-red-50 text-red-600 border-red-100" :
+                                        "bg-gray-50 text-gray-500 border-gray-100"
+                                    )}>
+                                        {item.status || 'Active'}
+                                    </div>
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteCampaign(item.id);
+                                        }}
+                                        className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                        title="Delete Campaign"
+                                    >
+                                        <Trash2 size={12} />
+                                    </button>
+                                </div>
                         </div>
                         <div className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden">
                             <motion.div 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db } from '../lib/firebase';
 import { 
@@ -8,13 +8,22 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, runTransaction, collection, serverTimestamp } from 'firebase/firestore';
 import { LogIn, UserPlus, Zap, ArrowLeft, Mail, Lock, User } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { handleFirestoreError, OperationType } from '../lib/firebase';
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const referralCodeFromUrl = searchParams.get('ref');
+  
+  useEffect(() => {
+    if (referralCodeFromUrl) {
+      localStorage.setItem('pending_referral', referralCodeFromUrl);
+    }
+  }, [referralCodeFromUrl]);
+
   const [isLogin, setIsLogin] = useState(true);
   const [role, setRole] = useState<'creator' | 'brand'>('creator');
   const [email, setEmail] = useState('');
@@ -42,28 +51,65 @@ export default function Auth() {
         }
         const res = await createUserWithEmailAndPassword(auth, email, password);
         
+        // Handle Referral Logic
+        const pendingRef = localStorage.getItem('pending_referral');
+        let referredBy = null;
+        if (pendingRef) {
+            referredBy = pendingRef;
+            localStorage.removeItem('pending_referral'); // Clear after use
+        }
+
         // Fast-track profile and wallet creation in background to avoid blocking user
         const userPath = `users/${res.user.uid}`;
         const walletPath = `users/${res.user.uid}/wallet/balance`;
         
-        setDoc(doc(db, userPath), {
-          uid: res.user.uid,
-          email: res.user.email,
-          role,
-          fullName,
-          userName,
-          createdAt: new Date().toISOString(),
-          displayName: fullName || userName || email.split('@')[0]
-        }).catch(e => console.warn("Background user creation failed:", e));
+        await runTransaction(db, async (transaction) => {
+          // Create User Profile
+          transaction.set(doc(db, userPath), {
+            uid: res.user.uid,
+            email: res.user.email,
+            role,
+            fullName,
+            userName,
+            referredBy: referredBy,
+            createdAt: new Date().toISOString(),
+            displayName: fullName || userName || email.split('@')[0]
+          });
 
-        setDoc(doc(db, walletPath), {
-          userId: res.user.uid,
-          balance: 0,
-          totalEarned: 0,
-          totalSpent: 0,
-          currency: 'INR',
-          updatedAt: new Date().toISOString()
-        }).catch(e => console.warn("Background wallet creation failed:", e));
+          // Create Wallet
+          transaction.set(doc(db, walletPath), {
+            userId: res.user.uid,
+            balance: 0,
+            totalEarned: 0,
+            totalSpent: 0,
+            currency: 'INR',
+            updatedAt: new Date().toISOString()
+          });
+
+          // Apply Referral Bonus if applicable
+          if (referredBy) {
+            const referrerWalletRef = doc(db, `users/${referredBy}/wallet/balance`);
+            const referrerWalletSnap = await transaction.get(referrerWalletRef);
+            
+            if (referrerWalletSnap.exists()) {
+              const currentBalance = referrerWalletSnap.data().balance || 0;
+              transaction.update(referrerWalletRef, {
+                balance: currentBalance + 5,
+                referralBonuses: (referrerWalletSnap.data().referralBonuses || 0) + 5,
+                updatedAt: new Date().toISOString()
+              });
+
+              // Add activity record for referrer
+              const activityRef = doc(collection(db, `users/${referredBy}/activities`));
+              transaction.set(activityRef, {
+                type: 'referral_bonus',
+                amount: 5,
+                message: `Referral bonus for ${fullName || email}`,
+                timestamp: serverTimestamp()
+              });
+            }
+          }
+        });
       }
     } catch (err: any) {
       console.error("Auth Error:", err);

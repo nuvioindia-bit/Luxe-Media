@@ -301,7 +301,7 @@ export default function Profile() {
                 </div>
                 <div>
                   <div className="text-[14px] font-medium text-gray-900">Refer & Earn</div>
-                  <div className="text-[10px] text-gray-500 inline-block mt-0.5">Invite friends and earn ₹50</div>
+                  <div className="text-[10px] text-gray-500 inline-block mt-0.5">Invite friends and earn ₹5</div>
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-300" />

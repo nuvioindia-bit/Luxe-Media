@@ -1,16 +1,39 @@
 import { motion } from 'motion/react';
 import { Gift, Share2, Copy, Coins, Users } from 'lucide-react';
-import { useState } from 'react';
-import { auth } from '../lib/firebase';
+import { useState, useEffect } from 'react';
+import { auth, db } from '../lib/firebase';
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { cn } from '../lib/utils';
 import { useAppConfig } from '../hooks/useAppConfig';
 
 export default function ReferEarn() {
   const config = useAppConfig();
   const [copied, setCopied] = useState(false);
+  const [stats, setStats] = useState({ referrals: 0, earnings: 0 });
   
-  const referralCode = auth.currentUser?.uid?.substring(0, 8).toUpperCase() || 'REXO123';
-  const referralLink = `https://${window.location.hostname}/?ref=${referralCode}`;
+  const referralCode = auth.currentUser?.uid || 'REXO123';
+  const referralLink = `${window.location.origin}/auth?ref=${referralCode}`;
+
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    // Listen for referred users
+    const q = query(collection(db, 'users'), where('referredBy', '==', auth.currentUser.uid));
+    const unsubUsers = onSnapshot(q, (snap) => {
+      setStats(prev => ({ ...prev, referrals: snap.size }));
+    });
+
+    // Listen for earnings from wallet
+    const unsubWallet = onSnapshot(doc(db, `users/${auth.currentUser.uid}/wallet/balance`), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        const totalRefEarnings = (data.referralBonuses || 0) + (data.referralCommission || 0);
+        setStats(prev => ({ ...prev, earnings: totalRefEarnings }));
+      }
+    });
+
+    return () => { unsubUsers(); unsubWallet(); };
+  }, []);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);
@@ -57,7 +80,7 @@ export default function ReferEarn() {
             </div>
             <h1 className="text-3xl font-display font-black mb-2 tracking-tight">Refer & Earn</h1>
             <p className="text-blue-100/80 px-8 text-xs font-medium leading-relaxed">
-              Scale the Rexo network and earn <span className="font-bold text-brand-accent">₹50</span> for every creator who completes their first campaign.
+              Scale the Rexo network and earn <span className="font-bold text-brand-accent">₹5</span> on every sign-up + <span className="font-bold text-brand-accent">10% commission</span> on their lifestyle earnings!
             </p>
          </div>
 
@@ -106,7 +129,7 @@ export default function ReferEarn() {
                       <Users className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-lg font-black text-gray-900 block leading-none">0</span>
+                    <span className="text-lg font-black text-gray-900 block leading-none">{stats.referrals}</span>
                     <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1 block">Referrals</span>
                   </div>
               </div>
@@ -115,7 +138,7 @@ export default function ReferEarn() {
                       <Coins className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-lg font-black text-gray-900 block leading-none">₹0</span>
+                    <span className="text-lg font-black text-gray-900 block leading-none">₹{stats.earnings}</span>
                     <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1 block">Earnings</span>
                   </div>
               </div>
@@ -129,8 +152,8 @@ export default function ReferEarn() {
          <div className="w-full space-y-6">
             {[
               { step: '01', title: 'Share Link', desc: 'Spread your invite across your network.', icon: Share2, color: 'text-blue-500', bg: 'bg-blue-50' },
-              { step: '02', title: 'Join & Build', desc: 'Friends create profiles and join campaigns.', icon: Users, color: 'text-purple-500', bg: 'bg-purple-50' },
-              { step: '03', title: 'Collect ₹50', desc: 'Earnings arrive after their first success.', icon: Gift, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+              { step: '02', title: 'Join & Build', desc: 'Friends create profiles and you get ₹5 immediately.', icon: Users, color: 'text-purple-500', bg: 'bg-purple-50' },
+              { step: '03', title: 'Lifetime 10%', desc: 'Earn 10% commission on every campaign they finish.', icon: Gift, color: 'text-emerald-500', bg: 'bg-emerald-50' },
             ].map((item, i) => (
               <div key={i} className="flex gap-5 items-start">
                   <div className={cn("w-12 h-12 rounded-[1.25rem] flex items-center justify-center shrink-0 shadow-sm border border-white", item.bg)}>

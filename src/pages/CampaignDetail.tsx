@@ -66,19 +66,25 @@ export default function CampaignDetail() {
     cpm: '0'
   });
 
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+
   const handleDelete = async () => {
-    if (!campaign || !campaign.id) return;
+    if (!campaign?.id) return;
+    
+    setLoading(true);
     try {
-      setLoading(true);
       await deleteDoc(doc(db, 'campaigns', campaign.id));
-      navigate(role === 'admin' ? '/admin' : '/dashboard/brand');
-    } catch (error) {
+      setShowDeleteConfirm(false);
+      navigate(role === 'admin' ? '/dashboard/admin' : '/dashboard');
+    } catch (error: any) {
       setLoading(false);
-      handleFirestoreError(error, OperationType.DELETE, 'campaigns');
+      handleFirestoreError(error, OperationType.DELETE, `campaigns/${campaign.id}`);
+      alert("Failed to delete campaign: " + error.message);
     }
   };
 
   const handleEditOpen = () => {
+    if (!campaign) return;
     setEditForm({
       title: campaign.title || '',
       description: campaign.description || '',
@@ -96,16 +102,36 @@ export default function CampaignDetail() {
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!campaign?.id || submittingEdit) return;
+    
+    setSubmittingEdit(true);
     try {
+      const cpmVal = parseFloat(editForm.cpm);
       const finalForm = {
         ...editForm,
-        cpm: parseFloat(editForm.cpm)
+        cpm: isNaN(cpmVal) ? 0 : cpmVal,
+        updatedAt: serverTimestamp()
       };
+      
       await updateDoc(doc(db, 'campaigns', campaign.id), finalForm);
-      setCampaign({ ...campaign, ...finalForm });
+      
+      // Update local state carefully to avoid crashes
+      setCampaign((prev: any) => {
+        if (!prev) return null;
+        return { 
+          ...prev, 
+          ...editForm, 
+          cpm: isNaN(cpmVal) ? 0 : cpmVal 
+        };
+      });
+      
       setShowEditModal(false);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, 'campaigns');
+      alert("Campaign updated successfully!");
+    } catch (error: any) {
+      handleFirestoreError(error, OperationType.UPDATE, `campaigns/${campaign.id}`);
+      alert("Failed to update campaign: " + error.message);
+    } finally {
+      setSubmittingEdit(false);
     }
   };
 
@@ -499,11 +525,12 @@ export default function CampaignDetail() {
                   </div>
                 )}
                 
-                 {app.status === 'under_review' && (
+                  {app.status === 'under_review' && (
                     <button 
                      onClick={async () => {
                        const amountStr = app.budget || '0';
                        const amount = parseInt(amountStr.replace(/[^0-9]/g, '')) || 0;
+                       const commission = Math.floor(amount * 0.1);
                        
                        try {
                          await runTransaction(db, async (transaction) => {
@@ -512,8 +539,7 @@ export default function CampaignDetail() {
                            transaction.update(appRef, { status: 'paid', paidAt: serverTimestamp() });
    
                            // 2. Update creator's wallet
-                           const walletPath = `users/${app.creatorId}/wallet/balance`;
-                           const walletRef = doc(db, walletPath);
+                           const walletRef = doc(db, `users/${app.creatorId}/wallet/balance`);
                            const walletSnap = await transaction.get(walletRef);
                            
                            if (!walletSnap.exists()) {
@@ -541,6 +567,36 @@ export default function CampaignDetail() {
                              timestamp: serverTimestamp(),
                              status: 'completed'
                            });
+
+                           // 4. Handle Referral Commission
+                           const creatorRef = doc(db, `users/${app.creatorId}`);
+                           const creatorSnap = await transaction.get(creatorRef);
+                           const referredBy = creatorSnap.exists() ? creatorSnap.data().referredBy : null;
+
+                           if (referredBy && commission > 0) {
+                              const referrerWalletRef = doc(db, `users/${referredBy}/wallet/balance`);
+                              const referrerWalletSnap = await transaction.get(referrerWalletRef);
+                              
+                              if (referrerWalletSnap.exists()) {
+                                const currentRefBalance = referrerWalletSnap.data().balance || 0;
+                                transaction.update(referrerWalletRef, {
+                                  balance: currentRefBalance + commission,
+                                  referralCommission: (referrerWalletSnap.data().referralCommission || 0) + commission,
+                                  updatedAt: serverTimestamp()
+                                });
+
+                                // Notify Referrer
+                                const notifRef = doc(collection(db, 'notifications'));
+                                transaction.set(notifRef, {
+                                  recipientId: referredBy,
+                                  type: 'system',
+                                  title: 'Commission Received! 💰',
+                                  message: `You earned ₹${commission} (10%) commission from your referral's campaign success!`,
+                                  createdAt: serverTimestamp(),
+                                  read: false
+                                });
+                              }
+                           }
                          });
                        } catch (error) {
                          handleFirestoreError(error, OperationType.UPDATE, `applications/${app.id}`);
@@ -550,7 +606,7 @@ export default function CampaignDetail() {
                    >
                      Release Payment
                    </button>
-                 )}
+                  )}
               </div>
             ))}
             {brandApplications.length === 0 && (
@@ -807,10 +863,25 @@ export default function CampaignDetail() {
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 block">Drive Link (Assets/Brief)</label>
                     <input type="url" className="premium-input w-full" value={editForm.driveLink || ''} onChange={e => setEditForm({...editForm, driveLink: e.target.value})} placeholder="https://drive.google.com/..." />
                  </div>
-                 <div className="pt-4 mt-6 border-t border-gray-100">
-                    <button type="submit" className="premium-button-primary w-full flex items-center justify-center py-3 text-xs uppercase tracking-widest font-black">
-                        Save Changes
-                    </button>
+                 <div className="pt-4 mt-6 border-t border-gray-100 flex flex-col gap-3">
+                   <button 
+                     disabled={submittingEdit}
+                     type="submit" 
+                     className="premium-button-primary w-full py-4 flex items-center justify-center gap-2"
+                   >
+                     {submittingEdit ? (
+                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                     ) : (
+                       <>Save Changes <CheckCircle2 className="w-4 h-4" /></>
+                     )}
+                   </button>
+                   <button 
+                     type="button" 
+                     onClick={() => setShowEditModal(false)}
+                     className="premium-button-secondary w-full py-3"
+                   >
+                     Cancel
+                   </button>
                  </div>
              </form>
            </motion.div>

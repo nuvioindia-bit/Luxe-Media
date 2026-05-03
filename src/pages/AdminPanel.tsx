@@ -36,9 +36,10 @@ import {
   orderBy, 
   setDoc,
   serverTimestamp,
-  addDoc 
+  addDoc,
+  runTransaction
 } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { isAdminEmail } from '../constants';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -135,12 +136,61 @@ export default function AdminPanel() {
     }
   };
 
-  const updateWithdrawalStatus = async (id: string, status: string) => {
+  const updateWithdrawalStatus = async (id: string, status: 'completed' | 'cancelled') => {
     try {
       setProcessingId(id);
-      await updateDoc(doc(db, 'withdrawals', id), { status, updatedAt: serverTimestamp() });
-    } catch (e) {
-      console.error(e);
+      const withdrawal = withdrawals.find(w => w.id === id);
+      if (!withdrawal) return;
+
+      await runTransaction(db, async (transaction) => {
+        const withdrawalRef = doc(db, 'withdrawals', id);
+        
+        if (status === 'cancelled') {
+          // Refund the money to creator's wallet
+          const walletRef = doc(db, `users/${withdrawal.creatorId}/wallet/balance`);
+          const walletSnap = await transaction.get(walletRef);
+          
+          if (walletSnap.exists()) {
+            const currentBalance = walletSnap.data().balance || 0;
+            transaction.update(walletRef, {
+              balance: currentBalance + withdrawal.amount,
+              updatedAt: serverTimestamp()
+            });
+
+            // Log refund activity
+            const activityRef = doc(collection(db, `users/${withdrawal.creatorId}/activities`));
+            transaction.set(activityRef, {
+              type: 'refund',
+              amount: withdrawal.amount,
+              message: `Withdrawal rejected: ₹${withdrawal.amount} refunded`,
+              timestamp: serverTimestamp()
+            });
+          }
+        }
+
+        transaction.update(withdrawalRef, { 
+          status, 
+          updatedAt: serverTimestamp(),
+          processedAt: status === 'completed' ? serverTimestamp() : null
+        });
+
+        // Notify user
+        const notifRef = doc(collection(db, 'notifications'));
+        transaction.set(notifRef, {
+          recipientId: withdrawal.creatorId,
+          type: 'system',
+          title: status === 'completed' ? 'Payout Success! 💸' : 'Payout Rejected ⚠️',
+          message: status === 'completed' 
+            ? `Your withdrawal of ₹${withdrawal.amount} has been processed successfully.`
+            : `Your withdrawal of ₹${withdrawal.amount} was rejected and refunded to your wallet.`,
+          createdAt: serverTimestamp(),
+          read: false
+        });
+      });
+
+      alert(`Withdrawal marked as ${status}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `withdrawals/${id}`);
     } finally {
       setProcessingId(null);
     }
@@ -148,6 +198,19 @@ export default function AdminPanel() {
 
   const toggleConfig = async (key: string, value: boolean) => {
     await setDoc(doc(db, 'app_config', 'main'), { [key]: value }, { merge: true });
+  };
+
+  const handleDeleteCampaign = async (id: string, title: string) => {
+    if (!window.confirm(`DANGER: Permanently delete campaign "${title}"? This will remove all associated applications.`)) return;
+    try {
+      setProcessingId(id);
+      await deleteDoc(doc(db, 'campaigns', id));
+      // In a real app, you'd also delete applications, but for now we follow simple delete
+    } catch (error: any) {
+      handleFirestoreError(error, OperationType.DELETE, `campaigns/${id}`);
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const filteredItems = useMemo(() => {
@@ -171,635 +234,340 @@ export default function AdminPanel() {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#F1F5F9] flex flex-col font-sans select-none overflow-hidden text-slate-900">
-      {/* Header - Sleeker & Minimal */}
-      <header className="bg-[#0A192F] px-3 py-3 shrink-0 flex items-center justify-between z-50">
-        <div className="flex items-center gap-2">
+    <div className="space-y-6 pb-20 px-4 pt-4">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-display font-bold tracking-tight">Admin Console</h1>
           <button 
-            onClick={() => navigate(-1)} 
-            className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all active:scale-90"
+            onClick={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 1000); }}
+            className={cn("p-2 text-gray-400 hover:text-brand-primary transition-all rounded-lg bg-white border border-gray-100 shadow-sm", isRefreshing && "animate-spin")}
           >
-            <ArrowLeft className="w-4 h-4 text-white" />
+            <RefreshCw size={16} />
           </button>
-          <div>
-            <h1 className="text-white font-black text-sm tracking-tight leading-none uppercase">Rexo Console</h1>
-            <div className="flex items-center gap-1 mt-0.5">
-              <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></div>
-              <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">System Secure</span>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+            <div className="text-2xl font-black text-gray-900 leading-none">{stats.users}</div>
+            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
+              <Users size={12} className="text-blue-500" /> Users
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" onClick={() => setActiveTab('ads')}>
+            <div className="text-2xl font-black text-orange-600 leading-none">{stats.pendingAds}</div>
+            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
+              <Megaphone size={12} className="text-orange-500" /> Pending Ads
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" onClick={() => setActiveTab('payouts')}>
+            <div className="text-2xl font-black text-red-600 leading-none">{stats.pendingPayouts}</div>
+            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
+              <Wallet size={12} className="text-red-500" /> Payouts
+            </div>
+          </div>
+          <div className="bg-slate-900 p-4 rounded-xl border border-white/5 shadow-sm">
+            <div className="text-2xl font-black text-emerald-400 leading-none">₹{stats.totalPaid.toLocaleString()}</div>
+            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
+              <TrendingUp size={12} className="text-emerald-500" /> Total Paid
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-           <div className="flex -space-x-1.5">
-             {users.slice(0, 3).map((u, i) => (
-               <div key={i} className="w-6 h-6 rounded-full border border-[#0A192F] bg-gray-700 overflow-hidden shrink-0">
-                 {u.photoURL ? <img src={u.photoURL} className="w-full h-full object-cover" /> : null}
-               </div>
-             ))}
-           </div>
-           <div className="w-px h-5 bg-white/10 mx-0.5"></div>
-           <button className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20 active:scale-90 transition-all">
-             <Bell className="w-4 h-4" />
-           </button>
+
+        {/* Search */}
+        <div className="relative group">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 group-focus-within:text-brand-primary transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Search users, campaigns..."
+            className="w-full bg-white border border-gray-200 rounded-lg px-9 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all text-xs font-medium shadow-sm"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-      </header>
 
-      {/* Primary Navigation - Compact Row */}
-      <nav className="bg-white border-b border-gray-100 flex items-center px-3 overflow-x-auto hide-scrollbar py-1.5 gap-1 shadow-sm shrink-0">
-        {[
-          { id: 'overview', label: 'Monitor', icon: LayoutDashboard },
-          { id: 'users', label: 'Users', icon: Users },
-          { id: 'payouts', label: 'Finance', icon: Wallet },
-          { id: 'ads', label: 'Approvals', icon: ShieldCheck },
-          { id: 'config', label: 'System', icon: Settings },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => { setActiveTab(tab.id); setSearch(''); }}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all whitespace-nowrap",
-              activeTab === tab.id 
-                ? "bg-blue-50 text-blue-600 font-bold text-[9px] uppercase tracking-wider shadow-sm" 
-                : "text-gray-400 font-bold text-[9px] uppercase tracking-wider hover:text-gray-600"
-            )}
-          >
-            <tab.icon className="w-3 h-3" />
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
-      {/* Global Search Strip - Only for lists */}
-      <AnimatePresence>
-        {(activeTab === 'users' || activeTab === 'ads') && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="bg-white border-b border-gray-100 px-4 py-3 shrink-0"
-          >
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
-              <input 
-                type="text" 
-                placeholder={`Filter ${activeTab}...`}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2.5 pl-9 pr-4 text-xs font-bold text-gray-800 placeholder:text-gray-300 outline-none focus:ring-2 focus:ring-blue-500/10 transition-all shadow-inner"
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Content Area */}
-      <main className="flex-1 overflow-y-auto hide-scrollbar p-4 scroll-smooth">
-        <AnimatePresence mode="wait">
-          {activeTab === 'overview' && (
-            <motion.div 
-              key="overview"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.02 }}
-              className="space-y-4"
+        {/* Tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 hide-scrollbar">
+          {[
+            { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+            { id: 'users', label: 'Users', icon: Users },
+            { id: 'ads', label: 'Approvals', icon: ShieldCheck },
+            { id: 'payouts', label: 'Payouts', icon: Wallet },
+            { id: 'config', label: 'Config', icon: Settings },
+          ].map(tab => (
+            <button 
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setSearch(''); }}
+              className={cn(
+                "px-4 py-2 rounded-lg text-[10px] font-bold whitespace-nowrap border transition-all active:scale-95 flex items-center gap-2",
+                activeTab === tab.id 
+                  ? "bg-slate-900 text-white border-slate-900 shadow-md" 
+                  : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
+              )}
             >
-              {/* Quick High-Level Stats */}
-              <div className="grid grid-cols-2 gap-2">
-                 <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm relative overflow-hidden group">
-                    <div className="relative z-10">
-                      <div className="text-xl font-black text-gray-900 leading-none">{stats.users}</div>
-                      <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1.5">Active Entities</div>
-                    </div>
-                    <Users className="absolute -right-2 -bottom-2 w-10 h-10 text-gray-50 group-hover:text-blue-50 transition-colors" />
-                 </div>
-                 <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm relative overflow-hidden group active:scale-95 transition-all" onClick={() => setActiveTab('ads')}>
-                    <div className="relative z-10">
-                      <div className="text-xl font-black text-orange-600 leading-none">{stats.pendingAds}</div>
-                      <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1.5">Review Required</div>
-                    </div>
-                    <Megaphone className="absolute -right-2 -bottom-2 w-10 h-10 text-gray-50 group-hover:text-orange-50 transition-colors" />
-                 </div>
-                 <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm relative overflow-hidden group active:scale-95 transition-all" onClick={() => setActiveTab('payouts')}>
-                    <div className="relative z-10">
-                      <div className="text-xl font-black text-red-600 leading-none">{stats.pendingPayouts}</div>
-                      <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1.5">Pending Payouts</div>
-                    </div>
-                    <Wallet className="absolute -right-2 -bottom-2 w-10 h-10 text-gray-50 group-hover:text-red-50 transition-colors" />
-                 </div>
-                 <div className="bg-slate-900 p-3 rounded-xl border border-white/5 shadow-sm relative overflow-hidden group">
-                    <div className="relative z-10">
-                      <div className="text-xl font-black text-emerald-400 leading-none">₹{stats.totalPaid.toLocaleString()}</div>
-                      <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1.5">Gross Outflow</div>
-                    </div>
-                    <TrendingUp className="absolute -right-2 -bottom-2 w-10 h-10 text-white/5 group-hover:text-white/10 transition-colors" />
-                 </div>
-              </div>
+              <tab.icon size={12} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-              {/* Logs / Recent Activity - Compact List */}
-              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mt-6 shadow-sm">
-                <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-slate-50/50">
-                   <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2">
-                     <Activity size={14} className="text-blue-500" /> System Logs
-                   </h3>
-                   <span className="text-[8px] font-bold text-gray-300 uppercase tracking-widest">Real-time Feed</span>
-                </div>
-                <div className="divide-y divide-gray-50">
-                   {users.slice(0, 5).map(u => (
-                     <div key={u.id} className="p-3 flex items-center gap-3 hover:bg-slate-50/10 transition-colors">
-                        <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100">
-                          {u.photoURL ? <img src={u.photoURL} className="w-full h-full object-cover rounded-lg" /> : <UserCog size={14} className="text-gray-300" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                           <div className="text-[10px] font-black text-gray-800 truncate">{u.displayName || u.email}</div>
-                           <div className="text-[8px] font-bold text-gray-400 uppercase">New account registered</div>
-                        </div>
-                        <div className="text-[8px] font-bold text-gray-300 uppercase shrink-0">Now</div>
-                     </div>
-                   ))}
-                </div>
-              </div>
-            </motion.div>
+      <AnimatePresence mode="wait">
+        <motion.div
+           key={activeTab}
+           initial={{ opacity: 0, y: 10 }}
+           animate={{ opacity: 1, y: 0 }}
+           exit={{ opacity: 0, y: -10 }}
+           className="min-h-[400px]"
+        >
+          {activeTab === 'overview' && (
+             <div className="space-y-4">
+               <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                 <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-slate-50/50">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-900 flex items-center gap-2">
+                      <Activity size={14} className="text-blue-500" /> Recent Registrations
+                    </h3>
+                 </div>
+                 <div className="divide-y divide-gray-50">
+                    {users.slice(0, 5).map(u => (
+                      <div key={u.id} className="p-3 flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100 overflow-hidden">
+                           {u.photoURL ? <img src={u.photoURL} className="w-full h-full object-cover" /> : <UserCog size={14} className="text-gray-300" />}
+                         </div>
+                         <div className="flex-1">
+                            <div className="text-[10px] font-bold text-gray-900">{u.displayName || u.email}</div>
+                            <div className="text-[8px] font-medium text-gray-400">{u.role || 'creator'} • joined recently</div>
+                         </div>
+                         <ChevronRight size={14} className="text-gray-300" />
+                      </div>
+                    ))}
+                 </div>
+               </div>
+             </div>
           )}
 
           {activeTab === 'users' && (
-            <motion.div 
-               key="users"
-               initial={{ opacity: 0, x: -10 }}
-               animate={{ opacity: 1, x: 0 }}
-               className="space-y-1.5 pb-10"
-            >
-              {filteredItems.map((u: any) => (
-                <div key={u.id} className="bg-white p-2.5 rounded-xl border border-gray-100 flex items-center gap-2.5 shadow-sm group hover:border-blue-100 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center shrink-0 relative overflow-hidden">
-                    {u.photoURL ? <img src={u.photoURL} className="w-full h-full object-cover" /> : <UserCog className="w-4 h-4 text-slate-300" />}
-                    {isAdminEmail(u.email) && (
-                      <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center">
-                        <ShieldCheck className="w-3 h-3 text-blue-500" />
+             <div className="space-y-3">
+               {filteredItems.map((u: any) => (
+                 <div key={u.id} className="bg-white p-3 rounded-xl border border-gray-100 flex items-center gap-3 shadow-sm">
+                   <div className="w-10 h-10 rounded-lg bg-slate-50 border border-gray-100 flex items-center justify-center relative overflow-hidden shrink-0">
+                     {u.photoURL ? <img src={u.photoURL} className="w-full h-full object-cover" /> : <UserCog className="w-5 h-5 text-slate-300" />}
+                     {isAdminEmail(u.email) && <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center"><ShieldCheck className="w-4 h-4 text-blue-500" /></div>}
+                   </div>
+                   <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-bold text-gray-900 truncate">{u.displayName || 'Unnamed Partner'}</div>
+                      <div className="text-[9px] font-medium text-gray-400 truncate">{u.email}</div>
+                      <div className="flex gap-1 mt-1">
+                        <span className="text-[7px] font-bold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{u.role || 'creator'}</span>
+                        {u.isBanned && <span className="text-[7px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-100">Banned</span>}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                       <h4 className="text-[10px] font-black text-gray-900 truncate tracking-tight">{u.displayName || 'Unnamed Partner'}</h4>
-                       {isAdminEmail(u.email) && <span className="text-[5px] font-black text-white bg-blue-600 px-1 py-0.5 rounded uppercase tracking-tighter shadow-sm">ROOT</span>}
-                    </div>
-                    <p className="text-[8px] font-bold text-gray-400 truncate opacity-60 tracking-tight">{u.email}</p>
-                    <div className="flex items-center gap-1 mt-1">
-                       <span className={cn(
-                        "text-[6px] font-black uppercase px-1.5 py-0.5 rounded-md shadow-sm border", 
-                        u.role === 'brand' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-indigo-50 text-indigo-600 border-indigo-100'
-                       )}>
-                         {u.role || 'creator'}
-                       </span>
-                       {u.isBanned && <span className="text-[6px] font-black uppercase px-1.5 py-0.5 rounded-md bg-red-50 text-red-600 border border-red-100">SILENCED</span>}
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <button 
-                      disabled={processingId === u.id}
-                      onClick={(e) => { e.stopPropagation(); toggleBan(u); }}
-                      className={cn(
-                        "w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-sm active:scale-90",
-                        u.isBanned ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-orange-50 text-orange-600 border border-orange-100",
-                        processingId === u.id && "animate-pulse"
-                      )}
-                    >
-                      {u.isBanned ? <ShieldCheck size={14}/> : <Ban size={14}/>}
-                    </button>
-                    {!isAdminEmail(u.email) && (
-                      <button onClick={(e) => { e.stopPropagation(); deleteUser(u); }} className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center border border-red-100 active:scale-90 shadow-sm transition-all">
-                        <Trash2 size={14}/>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </motion.div>
+                   </div>
+                   <div className="flex gap-1.5">
+                     <button 
+                       disabled={processingId === u.id}
+                       onClick={() => toggleBan(u)}
+                       className={cn(
+                         "w-8 h-8 rounded-lg flex items-center justify-center",
+                         u.isBanned ? "bg-emerald-50 text-emerald-600" : "bg-orange-50 text-orange-600"
+                       )}
+                     >
+                       {u.isBanned ? <ShieldCheck size={16}/> : <Ban size={16}/>}
+                     </button>
+                     {!isAdminEmail(u.email) && (
+                       <button onClick={() => deleteUser(u)} className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+                         <Trash2 size={16}/>
+                       </button>
+                     )}
+                   </div>
+                 </div>
+               ))}
+             </div>
           )}
 
           {activeTab === 'ads' && (
-             <motion.div 
-               key="ads"
-               initial={{ opacity: 0, x: -10 }}
-               animate={{ opacity: 1, x: 0 }}
-               className="space-y-2 pb-10"
-             >
-                {/* Filter Sub-nav */}
-                <div className="flex gap-1 mb-2">
-                   {['pending', 'active', 'rejected', 'all'].map((f: any) => (
-                      <button
-                        key={f}
-                        onClick={() => setAdFilter(f)}
-                        className={cn(
-                          "px-2 py-1 rounded-md text-[7px] font-black uppercase tracking-widest transition-all border",
-                          adFilter === f ? "bg-slate-900 text-white border-slate-900 shadow-sm" : "bg-white text-gray-400 border-gray-100"
-                        )}
-                      >
-                         {f}
-                      </button>
-                   ))}
-                </div>
-
-                {filteredItems.map((c: any) => (
-                   <div key={c.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm active:scale-[0.98] transition-all" onClick={() => setSelectedCampaign(c)}>
-                      <div className="p-2.5 flex gap-2.5">
-                         <div className="w-11 h-11 rounded-lg bg-slate-50 border border-gray-100 shrink-0 overflow-hidden flex items-center justify-center">
-                            {c.image ? <img src={c.image} className="w-full h-full object-cover" /> : <Megaphone className="w-5 h-5 text-slate-200" />}
-                         </div>
-                         <div className="flex-1 min-w-0 py-0">
-                            <div className="flex items-center justify-between">
-                               <span className={cn(
-                                 "text-[6px] font-black uppercase px-1.5 py-0.5 rounded-md",
-                                 c.status === 'pending' ? 'bg-orange-50 text-orange-600 border border-orange-100' : 
-                                 c.status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'
-                               )}>
-                                 {c.status}
-                               </span>
-                               <span className="text-[6px] font-black text-slate-300 uppercase tracking-widest">{c.brandName || 'System'}</span>
-                            </div>
-                            <h4 className="text-[10px] font-black text-slate-900 mt-1 truncate tracking-tight">{c.title}</h4>
-                            <div className="mt-0.5 flex items-center justify-between">
-                               <div className="text-blue-600 font-black text-[11px]">₹{c.reward || c.budget}</div>
-                               <span className="text-[6px] font-bold text-slate-300 uppercase shrink-0">{c.platform || 'General'}</span>
-                            </div>
-                         </div>
-                      </div>
-                      {c.status === 'pending' && (
-                        <div className="flex p-1 gap-1 bg-slate-50/50 border-t border-slate-50">
-                           <button 
-                             onClick={(e) => { e.stopPropagation(); updateCampaignStatus(c.id, 'active'); }}
-                             className="flex-1 py-1.5 bg-emerald-500 text-white rounded-lg text-[8px] font-black uppercase tracking-widest shadow-sm active:scale-95 transition-all flex items-center justify-center gap-1"
-                           >
-                             <CheckCircle size={10} /> Activate
-                           </button>
-                           <button 
-                             onClick={(e) => { e.stopPropagation(); updateCampaignStatus(c.id, 'rejected'); }}
-                             className="flex-1 py-1.5 bg-red-50 text-red-600 rounded-lg text-[8px] font-black uppercase tracking-widest border border-red-100 active:scale-95 transition-all"
-                           >
-                             Reject
-                           </button>
+             <div className="space-y-4">
+               <div className="flex gap-1">
+                 {['pending', 'active', 'rejected', 'all'].map((f: any) => (
+                   <button
+                     key={f}
+                     onClick={() => setAdFilter(f)}
+                     className={cn(
+                       "px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all",
+                       adFilter === f ? "bg-slate-900 text-white" : "bg-white text-gray-400"
+                     )}
+                   >
+                     {f}
+                   </button>
+                 ))}
+               </div>
+               
+               <div className="grid grid-cols-1 gap-4">
+                 {filteredItems.map((c: any) => (
+                   <div key={c.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+                     <div className="p-3 flex gap-3">
+                        <div className="w-16 h-16 rounded-xl bg-slate-50 border border-gray-100 overflow-hidden shrink-0 flex items-center justify-center">
+                           {c.image ? <img src={c.image} className="w-full h-full object-cover" /> : <Megaphone className="w-6 h-6 text-slate-200" />}
                         </div>
-                      )}
+                        <div className="flex-1 min-w-0">
+                           <div className="flex justify-between items-start">
+                              <span className={cn(
+                                "text-[7px] font-bold uppercase px-2 py-0.5 rounded-full border",
+                                c.status === 'pending' ? 'bg-orange-50 text-orange-600 border-orange-100' : 
+                                c.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'
+                              )}>
+                                {c.status}
+                              </span>
+                              <button 
+                                onClick={() => handleDeleteCampaign(c.id, c.title)}
+                                className="text-gray-300 hover:text-red-500 p-1"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                           </div>
+                           <h4 className="text-[11px] font-bold text-gray-900 mt-1 truncate">{c.title}</h4>
+                           <div className="flex justify-between items-center mt-1">
+                              <div className="text-[11px] font-black text-brand-primary">₹{(c.reward || c.budget || 0).toLocaleString()}</div>
+                              <div className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{c.brandName || 'System'}</div>
+                           </div>
+                        </div>
+                     </div>
+                     <div className="px-3 py-2 bg-slate-50 border-t border-gray-100 flex gap-2">
+                        {c.status !== 'active' && (
+                          <button 
+                            onClick={() => updateCampaignStatus(c.id, 'active')}
+                            className="flex-1 py-2 bg-emerald-500 text-white rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5"
+                          >
+                             <CheckCircle size={14} /> Activate
+                          </button>
+                        )}
+                        {c.status !== 'rejected' && (
+                          <button 
+                             onClick={() => updateCampaignStatus(c.id, 'rejected')}
+                             className="flex-1 py-2 bg-white text-red-500 border border-red-100 rounded-lg text-[9px] font-bold uppercase tracking-wider"
+                          >
+                             Reject
+                          </button>
+                        )}
+                        {c.status !== 'pending' && (
+                          <button 
+                             onClick={() => updateCampaignStatus(c.id, 'pending')}
+                             className="px-3 py-2 bg-white border border-gray-200 text-gray-400 rounded-lg"
+                             title="Reset Status"
+                          >
+                             <RefreshCw size={14} />
+                          </button>
+                        )}
+                     </div>
                    </div>
-                ))}
-             </motion.div>
+                 ))}
+               </div>
+             </div>
           )}
 
           {activeTab === 'payouts' && (
-            <motion.div 
-              key="payouts"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-3 pb-10"
-            >
-              {withdrawals.map(w => (
-                 <div key={w.id} className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm relative overflow-hidden hover:border-blue-100 transition-colors">
-                    <div className="flex items-center justify-between mb-3">
-                       <div className="flex items-center gap-2">
+             <div className="space-y-4">
+               {withdrawals.map(w => (
+                 <div key={w.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-3">
                           <div className={cn(
-                            "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 shadow-sm border",
+                            "w-10 h-10 rounded-xl flex items-center justify-center border",
                             w.status === 'pending' ? 'bg-orange-50 text-orange-500 border-orange-100' : 'bg-emerald-50 text-emerald-500 border-emerald-100'
                           )}>
-                             <Wallet size={14} />
+                             <Wallet size={20} />
                           </div>
                           <div>
-                             <div className="text-lg font-black text-gray-900 leading-none">₹{w.amount}</div>
-                             <div className="text-[7px] font-bold text-gray-400 uppercase mt-0.5 tracking-widest">Settlement Request</div>
+                             <div className="text-xl font-black text-gray-900">₹{w.amount}</div>
+                             <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Settlement Request</div>
                           </div>
                        </div>
                        <span className={cn(
-                         "text-[6px] font-black uppercase px-1.5 py-0.5 rounded-md shadow-sm border",
+                         "text-[8px] font-bold uppercase px-2 py-1 rounded-lg border",
                          w.status === 'pending' ? 'bg-orange-50 text-orange-600 border-orange-200' : 
                          w.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'
                        )}>
                          {w.status}
                        </span>
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-1.5 mb-3">
-                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 shadow-inner">
-                          <span className="text-[6px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Partner Balance</span>
-                          <span className="text-[9px] font-black text-blue-600 tracking-tight">
-                            ₹{users.find(u => u.id === w.creatorId)?.balance || 0}
-                          </span>
+
+                    <div className="grid grid-cols-2 gap-2">
+                       <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                          <span className="text-[8px] font-bold text-gray-400 uppercase block mb-1">Partner</span>
+                          <span className="text-[10px] font-bold text-slate-800">{users.find(u => u.id === w.creatorId)?.displayName || 'Unknown'}</span>
                        </div>
-                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 shadow-inner overflow-hidden">
-                          <span className="text-[6px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Partner Identity</span>
-                          <span className="text-[9px] font-black text-slate-800 truncate block tracking-tight">
-                            {users.find(u => u.id === w.creatorId)?.displayName || 'Unknown'}
-                          </span>
+                       <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                          <span className="text-[8px] font-bold text-gray-400 uppercase block mb-1">Method</span>
+                          <span className="text-[10px] font-bold text-slate-800">{w.method || 'Digital'}</span>
                        </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-1.5 mb-3">
-                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 shadow-inner">
-                          <span className="text-[6px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Provider</span>
-                          <span className="text-[9px] font-black text-slate-800 tracking-tight">{w.method || 'Digital Wallet'}</span>
-                       </div>
-                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 shadow-inner overflow-hidden">
-                          <span className="text-[6px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Dest. Address / ID</span>
-                          <span className="text-[9px] font-black text-slate-600 truncate block tracking-tight font-mono select-all">
-                            {w.target || 'System Node'}
-                          </span>
-                       </div>
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                       <span className="text-[8px] font-bold text-gray-400 uppercase block mb-1">Target Address</span>
+                       <span className="text-[10px] font-mono text-slate-600 break-all">{w.target || 'N/A'}</span>
                     </div>
 
                     {w.status === 'pending' && (
-                       <div className="flex gap-1.5">
+                       <div className="flex gap-2 pt-2">
                           <button 
-                            onClick={() => updateWithdrawalStatus(w.id, 'completed')}
                             disabled={processingId === w.id}
-                            className="flex-1 py-2.5 bg-slate-900 text-white rounded-lg text-[8px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                            onClick={() => updateWithdrawalStatus(w.id, 'completed')}
+                            className="flex-1 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg flex items-center justify-center gap-2"
                           >
-                             <CheckCircle size={12} /> Release Funds
+                             <CheckCircle size={14} /> Release Funds
                           </button>
                           <button 
-                            onClick={() => updateWithdrawalStatus(w.id, 'cancelled')}
                             disabled={processingId === w.id}
-                            className="px-3 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-lg text-[8px] font-black uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
+                            onClick={() => updateWithdrawalStatus(w.id, 'cancelled')}
+                            className="px-6 py-3 bg-red-50 text-red-600 border border-red-100 rounded-xl text-[10px] font-bold uppercase tracking-widest"
                           >
                              Deny
                           </button>
                        </div>
                     )}
                  </div>
-              ))}
-            </motion.div>
+               ))}
+             </div>
           )}
 
           {activeTab === 'config' && (
-            <motion.div 
-               key="config"
-               initial={{ opacity: 0, scale: 0.98 }}
-               animate={{ opacity: 1, scale: 1 }}
-               className="space-y-3 pb-10"
-            >
-               <div className="bg-slate-900 rounded-2xl p-4 text-white relative overflow-hidden shadow-xl border border-white/5">
-                  <div className="relative z-10">
-                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-1.5">
-                       <ShieldCheck className="text-blue-400" size={14} /> Command Interface
-                     </h3>
-                     <p className="text-slate-400 text-[8px] mt-1.5 font-medium leading-relaxed max-w-[85%]">Global overrides for application infrastructure state.</p>
-                  </div>
-                  <Zap className="absolute -right-6 -bottom-6 w-16 h-16 text-white/5 -rotate-12 translate-x-3 translate-y-3" />
-               </div>
-
-               <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 scale-[0.98]">
-                  <div className="space-y-0.5">
-                    {[
-                      { key: 'homePage', label: 'Feed Display System', icon: LayoutDashboard },
-                      { key: 'wallet', label: 'Treasury & Wallet', icon: Wallet },
-                      { key: 'campaigns', label: 'Ad Propagation Engine', icon: Megaphone },
-                      { key: 'referEarn', label: 'Growth Ecosystem', icon: Users },
-                      { key: 'aiPilot', label: 'Rexo Intelligence Hub', icon: Zap },
-                      { key: 'maintenance_mode', label: 'Service Interruption', icon: AlertCircle, destructive: true },
-                    ].map((item: any) => (
-                      <div key={item.key} className="flex items-center justify-between py-2 px-1.5 rounded-lg transition-colors hover:bg-slate-50/50 group">
-                         <div className="flex items-center gap-2">
-                            <div className={cn(
-                              "w-7 h-7 rounded-md flex items-center justify-center transition-all shadow-sm border",
-                              item.destructive ? "bg-red-50 text-red-500 border-red-100" : "bg-slate-50/50 text-slate-400 border-slate-100 group-hover:text-blue-500 group-hover:border-blue-100 group-hover:bg-blue-50"
-                            )}>
-                               <item.icon size={12} />
-                            </div>
-                            <span className={cn("text-[10px] font-black tracking-tight", item.destructive ? "text-red-700" : "text-slate-700")}>{item.label}</span>
-                         </div>
-                         <button 
-                           onClick={() => toggleConfig(item.key, !((config as any)[item.key] !== false))}
-                           className={cn(
-                             "w-8 h-4.5 rounded-full transition-all relative border-2",
-                             (config as any)[item.key] !== false ? "bg-blue-600 border-blue-600" : "bg-slate-200 border-slate-200"
-                           )}
-                         >
-                           <div className={cn(
-                             "absolute top-0.5 w-2.5 h-2.5 bg-white rounded-full shadow-md transition-all",
-                             (config as any)[item.key] !== false ? "right-0.5" : "left-0.5"
-                           )}></div>
-                         </button>
+            <div className="space-y-4">
+              <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-900 mb-4 flex items-center gap-2">
+                  <Settings size={16} className="text-blue-500" /> System Overrides
+                </h3>
+                <div className="space-y-2">
+                  {[
+                    { key: 'homePage', label: 'Discovery Feed', icon: LayoutDashboard },
+                    { key: 'wallet', label: 'Treasury & Payouts', icon: Wallet },
+                    { key: 'campaigns', label: 'Campaign Listings', icon: Megaphone },
+                    { key: 'referEarn', label: 'Referral Program', icon: Users },
+                    { key: 'aiPilot', label: 'Rexo AI Pilot', icon: Zap },
+                    { key: 'maintenance_mode', label: 'Maintenance Mode', icon: AlertCircle, destructive: true },
+                  ].map((item: any) => (
+                    <div key={item.key} className="flex items-center justify-between py-3 px-2 border-b border-gray-50 last:border-0">
+                      <div className="flex items-center gap-3">
+                        <item.icon size={16} className={item.destructive ? "text-red-500" : "text-gray-400"} />
+                        <span className={cn("text-xs font-medium", item.destructive ? "text-red-600" : "text-slate-700")}>{item.label}</span>
                       </div>
-                    ))}
-                  </div>
-               </div>
-
-               <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-4 shadow-sm">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20">
-                     <CheckCircle size={14} />
-                  </div>
-                  <div>
-                    <h5 className="text-[10px] font-black text-emerald-800 uppercase tracking-tight">System Integrity Normal</h5>
-                    <p className="text-[8px] font-bold text-emerald-600/80 uppercase tracking-widest mt-0.5">all nodes reporting online</p>
-                  </div>
-               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
-
-      {/* Floating Action Strip */}
-      <div className="bg-white/80 backdrop-blur-xl border-t border-gray-100 p-1.5 flex justify-around shrink-0 relative z-50">
-         <button onClick={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 800); }} className={cn("flex flex-col items-center gap-0.5 group transition-all active:scale-90 p-1.5", isRefreshing && "opacity-50")}>
-            <div className={cn("w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center border border-gray-100 group-hover:bg-blue-50 group-hover:text-blue-500 transition-all", isRefreshing && "animate-spin")}>
-               <RefreshCw size={16} />
-            </div>
-            <span className="text-[6.5px] font-black text-gray-400 uppercase tracking-widest">Pulse</span>
-         </button>
-         <button onClick={() => setShowAnalytics(true)} className="flex flex-col items-center gap-0.5 group p-1.5 active:scale-90 transition-all">
-            <div className="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center border border-gray-100 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-all">
-               <TrendingUp size={16} />
-            </div>
-            <span className="text-[6.5px] font-black text-gray-400 uppercase tracking-widest">Analytics</span>
-         </button>
-         <button onClick={() => setShowSecurity(true)} className="flex flex-col items-center gap-0.5 group p-1.5 active:scale-90 transition-all">
-            <div className="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center border border-gray-100 group-hover:bg-emerald-50 group-hover:text-emerald-500 transition-all">
-               <ShieldCheck size={16} />
-            </div>
-            <span className="text-[6.5px] font-black text-gray-400 uppercase tracking-widest">Security</span>
-         </button>
-      </div>
-
-      {/* Analytics Modal */}
-      <AnimatePresence>
-        {showAnalytics && (
-          <div className="fixed inset-0 z-[130] flex items-end justify-center bg-black/20 backdrop-blur-sm p-0">
-            <motion.div 
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              className="bg-white w-full max-w-lg rounded-t-3xl p-5 shadow-2xl"
-            >
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-50">
-                <div className="flex items-center gap-2">
-                  <TrendingUp size={18} className="text-indigo-500" />
-                  <h3 className="text-xs font-black uppercase tracking-widest">Growth Analytics</h3>
-                </div>
-                <button onClick={() => setShowAnalytics(false)} className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center"><XCircle size={14} className="text-gray-400" /></button>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-50 p-3 rounded-xl border border-gray-100">
-                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Conversion Velocity</span>
-                    <span className="text-lg font-black text-slate-800">84.2%</span>
-                    <div className="h-1 bg-gray-200 rounded-full mt-2 overflow-hidden"><div className="w-[84%] h-full bg-indigo-500 rounded-full"></div></div>
-                  </div>
-                  <div className="bg-slate-50 p-3 rounded-xl border border-gray-100">
-                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Retention Index</span>
-                    <span className="text-lg font-black text-slate-800">9.4/10</span>
-                    <div className="h-1 bg-gray-200 rounded-full mt-2 overflow-hidden"><div className="w-[94%] h-full bg-emerald-500 rounded-full"></div></div>
-                  </div>
-                </div>
-                <div className="bg-slate-900 p-4 rounded-2xl text-white">
-                   <div className="flex items-center justify-between mb-3">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Yield Curve</span>
-                      <span className="text-[8px] text-emerald-400 font-bold px-1.5 py-0.5 bg-emerald-400/10 rounded tracking-tight">+12.4% MoM</span>
-                   </div>
-                   <div className="flex items-end gap-1.5 h-16">
-                      {[30, 45, 25, 60, 40, 80, 55, 70, 45, 90].map((h, i) => (
-                        <div key={i} className="flex-1 bg-blue-500/20 rounded-t-sm relative transition-all hover:bg-blue-500" style={{ height: `${h}%` }}></div>
-                      ))}
-                   </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Security Modal */}
-      <AnimatePresence>
-        {showSecurity && (
-          <div className="fixed inset-0 z-[130] flex items-end justify-center bg-black/20 backdrop-blur-sm p-0">
-            <motion.div 
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              className="bg-white w-full max-w-lg rounded-t-3xl p-5 shadow-2xl"
-            >
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-50">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck size={18} className="text-emerald-500" />
-                  <h3 className="text-xs font-black uppercase tracking-widest">Protocol Guard</h3>
-                </div>
-                <button onClick={() => setShowSecurity(false)} className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center"><XCircle size={14} className="text-gray-400" /></button>
-              </div>
-              
-              <div className="space-y-2">
-                {[
-                  { time: '09:42:15', type: 'SYS', msg: 'Kernel integrity confirmed', icon: CheckCircle, color: 'text-emerald-500' },
-                  { time: '09:41:03', type: 'AUTH', msg: 'Admin login detected: ID_EX42', icon: UserCog, color: 'text-blue-500' },
-                  { time: '09:40:55', type: 'NET', msg: 'Traffic nodes balanced', icon: Activity, color: 'text-slate-400' },
-                  { time: '09:39:21', type: 'SEC', msg: 'Firewall status: ACTIVE', icon: ShieldCheck, color: 'text-emerald-500' },
-                ].map((log, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border border-gray-100">
-                    <log.icon size={14} className={log.color} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[8px] font-black text-slate-800 uppercase bg-white px-1 rounded shadow-sm border border-gray-100">{log.type}</span>
-                        <span className="text-[10px] font-bold text-slate-600 truncate tracking-tight">{log.msg}</span>
-                      </div>
+                      <button 
+                        onClick={() => toggleConfig(item.key, !((config as any)[item.key] !== false))}
+                        className={cn(
+                          "w-10 h-5 rounded-full transition-all relative border-2",
+                          (config as any)[item.key] !== false ? "bg-blue-600 border-blue-600" : "bg-gray-200 border-gray-200"
+                        )}
+                      >
+                        <div className={cn(
+                          "absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-md transition-all",
+                          (config as any)[item.key] !== false ? "right-0.5" : "left-0.5"
+                        )}></div>
+                      </button>
                     </div>
-                    <span className="text-[8px] font-black text-slate-300 font-mono tracking-tighter">{log.time}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 flex flex-col gap-2">
-                 <button className="w-full py-3 bg-red-50 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 border border-red-100">
-                    <Zap size={14} /> Full System Lockdown
-                 </button>
-                 <button className="w-full py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2">
-                    <RefreshCw size={14} /> Rotate Access Keys
-                 </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Ad Detail Modal - Super Compact */}
-      <AnimatePresence>
-        {selectedCampaign && (
-          <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/40 backdrop-blur-md p-0 overflow-hidden">
-             <motion.div 
-               initial={{ y: "100%" }}
-               animate={{ y: 0 }}
-               exit={{ y: "100%" }}
-               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-               className="bg-white w-full max-w-lg rounded-t-3xl overflow-hidden flex flex-col max-h-[85vh] shadow-2xl"
-             >
-                <div className="h-1 w-10 bg-slate-200 rounded-full mx-auto my-2 shrink-0" onClick={() => setSelectedCampaign(null)}></div>
-                
-                <div className="flex-1 overflow-y-auto hide-scrollbar px-5 pb-20">
-                   <div className="flex items-start gap-3 mt-1 mb-4">
-                      <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 shrink-0 overflow-hidden shadow-sm">
-                        {selectedCampaign.image ? <img src={selectedCampaign.image} className="w-full h-full object-cover" /> : <Megaphone className="w-6 h-6 text-slate-200" />}
-                      </div>
-                      <div className="flex-1 pt-0.5">
-                         <div className="flex items-center gap-1.5 mb-1">
-                            <span className="text-[6px] font-black px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-md uppercase border border-blue-100">{selectedCampaign.status}</span>
-                            <span className="text-[6px] font-bold text-slate-300 uppercase tracking-widest">{selectedCampaign.platform}</span>
-                         </div>
-                         <h2 className="text-sm font-black text-slate-900 leading-tight tracking-tight">{selectedCampaign.title}</h2>
-                         <p className="text-[8px] font-black text-indigo-500 uppercase mt-0.5 tracking-tighter">ID: {selectedCampaign.id.slice(0, 8)}...</p>
-                      </div>
-                   </div>
-
-                   <div className="grid grid-cols-3 gap-1.5 mb-4">
-                      <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 flex flex-col items-center text-center">
-                         <span className="text-[6px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Reward</span>
-                         <span className="text-sm font-black text-slate-900">₹{selectedCampaign.reward || selectedCampaign.budget}</span>
-                      </div>
-                      <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 flex flex-col items-center text-center">
-                         <span className="text-[6px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Target</span>
-                         <span className="text-[8px] font-black text-blue-600 uppercase mt-0.5 truncate w-full px-1">{selectedCampaign.category || 'GEN'}</span>
-                      </div>
-                      <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 flex flex-col items-center text-center">
-                         <span className="text-[6px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Protocol</span>
-                         <span className="text-[8px] font-black text-orange-600 uppercase mt-0.5 truncate w-full px-1">{selectedCampaign.campaignType || 'STD'}</span>
-                      </div>
-                   </div>
-
-                   <div className="space-y-3">
-                      <div>
-                        <h4 className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-                           <Activity size={8} /> Objective
-                        </h4>
-                        <div className="bg-slate-50 p-3 rounded-xl text-[10px] font-medium text-slate-600 leading-normal border border-slate-100 italic">
-                          {selectedCampaign.description || 'No descriptive payload.'}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                         <div className="bg-indigo-50/50 p-2.5 rounded-xl border border-indigo-100">
-                            <h5 className="text-[6px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Execution</h5>
-                            <p className="text-[9px] font-black text-indigo-900">{selectedCampaign.location || 'Distributed'}</p>
-                         </div>
-                         <div className="bg-blue-50/50 p-2.5 rounded-xl border border-blue-100">
-                            <h5 className="text-[6px] font-black text-blue-400 uppercase tracking-widest mb-0.5">Horizon</h5>
-                            <p className="text-[9px] font-black text-blue-900">{selectedCampaign.timeline || 'Immediate'}</p>
-                         </div>
-                      </div>
-                   </div>
+                  ))}
                 </div>
-
-                <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-100 flex gap-2 shadow-inner">
-                   {selectedCampaign.status !== 'active' && (
-                     <button 
-                       onClick={() => { updateCampaignStatus(selectedCampaign.id, 'active'); setSelectedCampaign(null); }}
-                       className="flex-1 py-3 bg-emerald-500 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                     >
-                        <CheckCircle size={14} /> Deploy
-                     </button>
-                   )}
-                   <button 
-                     onClick={() => { updateCampaignStatus(selectedCampaign.id, 'rejected'); setSelectedCampaign(null); }}
-                     className="px-4 py-3 bg-red-100 text-red-600 border border-red-100 rounded-xl text-[9px] font-black uppercase tracking-widest active:scale-95 flex items-center justify-center shrink-0"
-                   >
-                     <XCircle size={16} />
-                   </button>
-                </div>
-             </motion.div>
-          </div>
-        )}
+              </div>
+            </div>
+          )}
+        </motion.div>
       </AnimatePresence>
     </div>
   );

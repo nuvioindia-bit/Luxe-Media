@@ -14,23 +14,61 @@ export default function RoleSelection({ user, onComplete }: { user: any, onCompl
       const userPath = `users/${user.uid}`;
       const walletPath = `users/${user.uid}/wallet/balance`;
       
-      await setDoc(doc(db, userPath), {
-        uid: user.uid,
-        email: user.email,
-        role: role,
-        displayName: user.displayName || user.email?.split('@')[0],
-        photoURL: user.photoURL,
-        createdAt: new Date().toISOString()
-      }, { merge: true });
+      const pendingRef = localStorage.getItem('pending_referral');
+      let referredBy = null;
+      if (pendingRef) {
+          referredBy = pendingRef;
+          localStorage.removeItem('pending_referral');
+      }
 
-      await setDoc(doc(db, walletPath), {
-        userId: user.uid,
-        balance: 0,
-        totalEarned: 0,
-        totalSpent: 0,
-        currency: 'INR',
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+      await import('firebase/firestore').then(async ({ runTransaction, collection, serverTimestamp }) => {
+        await runTransaction(db, async (transaction) => {
+          // 1. Create User Profile
+          transaction.set(doc(db, userPath), {
+            uid: user.uid,
+            email: user.email,
+            role: role,
+            displayName: user.displayName || user.email?.split('@')[0],
+            photoURL: user.photoURL,
+            referredBy: referredBy,
+            createdAt: new Date().toISOString()
+          }, { merge: true });
+
+          // 2. Create Wallet
+          transaction.set(doc(db, walletPath), {
+            userId: user.uid,
+            balance: 0,
+            totalEarned: 0,
+            totalSpent: 0,
+            currency: 'INR',
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+
+          // 3. Apply Referral Bonus
+          if (referredBy) {
+            const referrerWalletRef = doc(db, `users/${referredBy}/wallet/balance`);
+            const referrerWalletSnap = await transaction.get(referrerWalletRef);
+            
+            if (referrerWalletSnap.exists()) {
+              const currentBalance = referrerWalletSnap.data().balance || 0;
+              transaction.update(referrerWalletRef, {
+                balance: currentBalance + 5,
+                referralBonuses: (referrerWalletSnap.data().referralBonuses || 0) + 5,
+                updatedAt: new Date().toISOString()
+              });
+
+              // Add activity record for referrer
+              const activityRef = doc(collection(db, `users/${referredBy}/activities`));
+              transaction.set(activityRef, {
+                type: 'referral_bonus',
+                amount: 5,
+                message: `Referral bonus for ${user.displayName || user.email}`,
+                timestamp: serverTimestamp()
+              });
+            }
+          }
+        });
+      });
       
       onComplete();
     } catch (error) {
