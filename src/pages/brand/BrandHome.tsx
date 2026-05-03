@@ -29,6 +29,7 @@ export default function BrandHome() {
     { label: 'Active Deals', value: '0', icon: Rocket, color: 'text-brand-accent', bg: 'bg-rose-50' },
   ]);
   const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [pendingApps, setPendingApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,6 +49,16 @@ export default function BrandHome() {
       }
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, walletPath);
+    });
+
+    // Real-time pending applications for this brand
+    const appsQ = query(
+      collection(db, 'applications'),
+      where('brandId', '==', auth.currentUser.uid),
+      where('status', 'in', ['pending', 'under_review'])
+    );
+    const unsubApps = onSnapshot(appsQ, (snap) => {
+      setPendingApps(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
     async function fetchBrandData() {
@@ -73,11 +84,14 @@ export default function BrandHome() {
     }
     fetchBrandData();
 
-    return () => unsubWallet();
+    return () => {
+      unsubWallet();
+      unsubApps();
+    };
   }, []);
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6 pb-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-display font-bold tracking-tight">Command Center</h1>
@@ -203,6 +217,47 @@ export default function BrandHome() {
 
         {/* Sidebar: Talent & Quick Actions */}
         <div className="space-y-8">
+          {/* Pending Applications Section */}
+          {pendingApps.length > 0 && (
+            <section className="space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Talent Pipeline</h3>
+                <span className="w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center text-[10px] font-black">{pendingApps.length}</span>
+              </div>
+              <div className="space-y-3">
+                {pendingApps.map(app => (
+                  <motion.div 
+                    key={app.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={() => navigate(`/dashboard/campaign/${app.campaignId}`)}
+                    className="premium-card p-4 hover:border-[#0A3D91]/20 transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center font-black text-[#0A3D91] shrink-0 border border-blue-100">
+                          {(app.creatorDetails?.name || app.creatorEmail)?.[0].toUpperCase()}
+                       </div>
+                       <div className="flex-1 min-w-0">
+                          <div className="text-[11px] font-black text-gray-900 truncate">{app.creatorDetails?.name || app.creatorEmail}</div>
+                          <div className="text-[8px] font-bold text-gray-400 uppercase tracking-widest truncate">{app.title}</div>
+                       </div>
+                       <ChevronRight size={14} className="text-gray-300 group-hover:text-[#0A3D91] transition-colors" />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                       <span className={cn(
+                         "text-[7px] font-black uppercase px-2 py-0.5 rounded-md",
+                         app.status === 'pending' ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"
+                       )}>
+                         {app.status === 'pending' ? 'Decision Pending' : 'Review Required'}
+                       </span>
+                       <span className="text-[8px] font-black text-emerald-500 uppercase">View Details</span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {config.show_ai_pilot !== false && (
             <section className="premium-card bg-indigo-50/50 border-indigo-100 p-6 flex flex-col items-center text-center">
               <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg border border-indigo-100 mb-6">

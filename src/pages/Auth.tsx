@@ -73,8 +73,14 @@ export default function Auth() {
         message = "DOMAIN ERROR: Please add 'aistudio.google.com' to your Firebase Console -> Authentication -> Settings -> Authorized Domains.";
       } else if (message.includes('network-request-failed')) {
         message = "Network error. Please check your internet connection or try again later.";
-      } else if (message.includes('invalid-credential')) {
-        message = "Invalid email or password.";
+      } else if (message.includes('invalid-credential') || message.includes('auth/invalid-credential')) {
+        message = isLogin 
+          ? "Invalid email or password. Please check your credentials or click 'Sign Up' to create a new account."
+          : "Invalid registration data. Please try another email.";
+      } else if (message.includes('email-already-in-use')) {
+        message = "This email is already registered. Please sign in instead.";
+      } else if (message.includes('weak-password')) {
+        message = "Password is too weak. Please use at least 6 characters.";
       }
       
       try {

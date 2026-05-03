@@ -277,7 +277,7 @@ export default function CampaignDetail() {
   }
 
   return (
-    <div className="space-y-6 pb-64 max-w-2xl mx-auto">
+    <div className="space-y-6 pb-24 max-w-2xl mx-auto">
       {/* Header */}
       <header className="flex items-center justify-between gap-4 px-1">
         <div className="flex items-center gap-4">
@@ -583,45 +583,37 @@ export default function CampaignDetail() {
 
       {/* Action Zone for Creators */}
       {role === 'creator' && (
-        <section className="sticky bottom-6 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border border-gray-100 z-40 max-w-2xl mx-auto rounded-[2rem] shadow-2xl shadow-black/10 mx-1 mb-8">
-        <div className="flex gap-4">
+        <section className="sticky bottom-6 left-0 right-0 p-3 bg-white/80 backdrop-blur-2xl border border-white/50 z-40 max-w-lg mx-auto rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] mb-8 mx-4">
+        <div className="flex gap-3">
           {!application ? (
             <button 
               onClick={() => setShowApplyModal(true)}
-              className="premium-button-primary flex-1 flex items-center justify-center gap-2"
+              className="flex-1 bg-brand-primary text-white py-4 rounded-[1.75rem] text-[13px] font-black uppercase tracking-[0.15em] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl shadow-brand-primary/20"
             >
-              <div className="w-5 h-5 rounded-md overflow-hidden bg-white flex items-center justify-center">
-                <img 
-                  src="https://i.postimg.cc/DyJxL7mx/file-0000000008cc720b9d91dbcfd5fecf45.png" 
-                  alt="Logo" 
-                  className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
+              <div className="w-5 h-5 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center backdrop-blur-sm border border-white/20">
+                <Zap className="w-3.5 h-3.5 text-brand-accent fill-brand-accent" />
               </div> Join Campaign
             </button>
           ) : (
-            <div className="flex-1 flex flex-col gap-3">
-                <div className={cn(
-                    "flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold border",
-                    application.status === 'pending' ? "bg-amber-50 border-amber-100 text-amber-600" :
-                    application.status === 'accepted' ? "bg-green-50 border-green-100 text-green-600" :
-                    application.status === 'under_review' ? "bg-blue-50 border-blue-100 text-blue-600" :
-                    "bg-gray-50 border-gray-100 text-gray-500"
-                )}>
-                    {application.status === 'pending' && <><Clock className="w-4 h-4" /> Application Pending</>}
-                    {application.status === 'accepted' && <><CheckCircle2 className="w-4 h-4" /> Application Accepted!</>}
-                    {application.status === 'under_review' && <><Clock className="w-4 h-4" /> Submission Under Review</>}
-                    {application.status === 'paid' && <><DollarSign className="w-4 h-4" /> Payment Completed</>}
-                </div>
-
+            <div className="flex-1">
+                {application.status === 'pending' && (
+                   <div className="flex items-center gap-3 bg-amber-50/50 border border-amber-100 rounded-[1.75rem] p-1 pr-4">
+                      <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shrink-0">
+                         <Clock className="w-5 h-5 animate-spin-slow" />
+                      </div>
+                      <div className="flex-1">
+                         <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest block">Application Pending</span>
+                         <span className="text-[8px] font-bold text-amber-600/70 block uppercase tracking-tight">Our team is reviewing your profile</span>
+                      </div>
+                   </div>
+                )}
                 {application.status === 'accepted' && (
-                    <form onSubmit={handleSubmitContent} className="space-y-3">
-                        <div className="relative">
-                            <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <form onSubmit={handleSubmitContent} className="flex gap-2">
+                        <div className="flex-1 relative">
                             <input 
                                 type="url"
-                                placeholder="Paste your content link (Reel, Post, etc.)"
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-xs font-medium focus:ring-2 focus:ring-brand-primary/20 outline-none"
+                                placeholder="Paste proof link (Post/Reel)"
+                                className="w-full h-full bg-blue-50/50 border border-blue-100 rounded-[1.75rem] pl-5 pr-4 text-[11px] font-bold text-blue-900 focus:ring-4 focus:ring-blue-500/10 outline-none placeholder:text-blue-300 transition-all"
                                 value={submissionLink}
                                 onChange={e => setSubmissionLink(e.target.value)}
                                 required
@@ -630,16 +622,38 @@ export default function CampaignDetail() {
                         <button 
                             type="submit"
                             disabled={submitting}
-                            className="premium-button-primary w-full flex items-center justify-center gap-2"
+                            className="w-14 h-14 bg-brand-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-brand-primary/20 active:scale-90 transition-all shrink-0"
                         >
-                            {submitting ? 'Submitting...' : <><Upload className="w-4 h-4" /> Submit Proof of Content</>}
+                            {submitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Upload size={20} />}
                         </button>
                     </form>
                 )}
+                {application.status === 'under_review' && (
+                   <div className="flex items-center gap-3 bg-blue-50/50 border border-blue-100 rounded-[1.75rem] p-1 pr-4">
+                      <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0">
+                         <Clock className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                         <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest block">Under Review</span>
+                         <span className="text-[8px] font-bold text-blue-600/70 block uppercase tracking-tight">Release expected within 24h</span>
+                      </div>
+                   </div>
+                )}
+                {application.status === 'paid' && (
+                   <div className="flex items-center gap-3 bg-emerald-50/50 border border-emerald-100 rounded-[1.75rem] p-1 pr-4">
+                      <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shrink-0">
+                         <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                         <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest block">Payment Credited</span>
+                         <span className="text-[8px] font-bold text-emerald-600/70 block uppercase tracking-tight">Check your Rexo wallet balance</span>
+                      </div>
+                   </div>
+                )}
             </div>
           )}
-          <button className="premium-button-secondary px-6">
-            <MessageCircle className="w-5 h-5 text-gray-500" />
+          <button className="w-14 h-14 bg-gray-50 border border-gray-100 text-gray-400 rounded-full flex items-center justify-center active:scale-90 transition-all shrink-0">
+            <MessageCircle size={22} />
           </button>
         </div>
       </section>
@@ -647,69 +661,61 @@ export default function CampaignDetail() {
       
     {/* Apply Modal */}
       {showApplyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
           <motion.div 
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-[2rem] p-6 w-full max-w-md relative max-h-[90vh] overflow-y-auto"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="bg-white rounded-[3rem] p-8 w-full max-w-sm relative shadow-2xl"
           >
             <button 
               onClick={() => setShowApplyModal(false)}
-              className="absolute top-6 right-6 text-gray-400 hover:text-gray-900"
+              className="absolute top-6 right-6 w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
-            <h2 className="text-xl font-black tracking-tight mb-6 mt-2">Apply for Campaign</h2>
+
+            <div className="mb-8">
+               <div className="w-14 h-14 bg-blue-50 text-brand-primary rounded-[1.5rem] flex items-center justify-center mb-4">
+                  <Zap className="fill-brand-primary" />
+               </div>
+               <h2 className="text-2xl font-black tracking-tight text-gray-900 leading-tight">Apply for<br/>Collaboration</h2>
+               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">{campaign.title}</p>
+            </div>
+
             <form onSubmit={handleApply} className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 block">Full Name</label>
-                <input required type="text" className="premium-input w-full" value={applyForm.name} onChange={e => setApplyForm({...applyForm, name: e.target.value})} placeholder="Your Name" />
-              </div>
-              <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 block">Location</label>
-                    <input required type="text" className="premium-input w-full" value={applyForm.location} onChange={e => setApplyForm({...applyForm, location: e.target.value})} placeholder="City, Country" />
-                  </div>
-                  <div className="w-24">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 block">Age</label>
-                    <input required type="number" min="13" max="100" className="premium-input w-full" value={applyForm.age} onChange={e => setApplyForm({...applyForm, age: e.target.value})} placeholder="Age" />
-                  </div>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 block">Content Category</label>
-                <select required className="premium-input w-full appearance-none bg-white font-medium text-sm" value={applyForm.contentCategory} onChange={e => setApplyForm({...applyForm, contentCategory: e.target.value})}>
-                  <option value="" disabled>Select category</option>
-                  <option value="Fashion & Lifestyle">Fashion & Lifestyle</option>
-                  <option value="Tech & Gaming">Tech & Gaming</option>
-                  <option value="Health & Fitness">Health & Fitness</option>
-                  <option value="Food & Travel">Food & Travel</option>
-                  <option value="Education">Education</option>
-                  <option value="Entertainment">Entertainment</option>
-                </select>
-              </div>
-              <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 block">Followers</label>
-                    <input required type="text" className="premium-input w-full" value={applyForm.followers} onChange={e => setApplyForm({...applyForm, followers: e.target.value})} placeholder="e.g. 10.5k" />
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 block">Platform</label>
-                    <select required className="premium-input w-full appearance-none bg-white font-medium text-sm" value={applyForm.platform} onChange={e => setApplyForm({...applyForm, platform: e.target.value})}>
-                      <option value="Instagram">Instagram</option>
-                      <option value="YouTube">YouTube</option>
-                      <option value="TikTok">TikTok</option>
-                      <option value="X (Twitter)">X (Twitter)</option>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1 block">Full Identity</label>
+                  <input required type="text" className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3.5 px-4 text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all" value={applyForm.name} onChange={e => setApplyForm({...applyForm, name: e.target.value})} placeholder="Your Name" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1 block">Location</label>
+                  <input required type="text" className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3.5 px-4 text-xs font-bold outline-none" value={applyForm.location} onChange={e => setApplyForm({...applyForm, location: e.target.value})} placeholder="City" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1 block">Age</label>
+                  <input required type="number" className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3.5 px-4 text-xs font-bold outline-none" value={applyForm.age} onChange={e => setApplyForm({...applyForm, age: e.target.value})} placeholder="Age" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1 block">Follower Base</label>
+                  <div className="flex gap-2">
+                    <input required type="text" className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl py-3.5 px-4 text-xs font-bold outline-none" value={applyForm.followers} onChange={e => setApplyForm({...applyForm, followers: e.target.value})} placeholder="e.g. 50k" />
+                    <select required className="bg-gray-50 border border-gray-100 rounded-2xl px-3 text-[10px] font-black uppercase tracking-widest outline-none" value={applyForm.platform} onChange={e => setApplyForm({...applyForm, platform: e.target.value})}>
+                        <option>Instagram</option>
+                        <option>YouTube</option>
+                        <option>X</option>
                     </select>
                   </div>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 block">Profile Link</label>
-                <input required type="url" className="premium-input w-full" value={applyForm.socialLink} onChange={e => setApplyForm({...applyForm, socialLink: e.target.value})} placeholder="https://..." />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1 block">Profile Deep Link</label>
+                  <input required type="url" className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3.5 px-4 text-xs font-bold outline-none" value={applyForm.socialLink} onChange={e => setApplyForm({...applyForm, socialLink: e.target.value})} placeholder="https://instagram.com/..." />
+                </div>
               </div>
               
-              <div className="pt-4 mt-6 border-t border-gray-100">
-                <button type="submit" disabled={applying} className="premium-button-primary w-full flex items-center justify-center gap-2">
-                    {applying ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Submit Application'}
+              <div className="pt-6">
+                <button type="submit" disabled={applying} className="w-full bg-[#0A3D91] text-white py-4.5 rounded-[1.75rem] text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-900/30 active:scale-95 transition-all">
+                    {applying ? 'Sending Identity...' : 'Confirm Registration'}
                 </button>
               </div>
             </form>

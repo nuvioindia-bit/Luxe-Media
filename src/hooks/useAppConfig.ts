@@ -11,6 +11,15 @@ export interface AppConfig {
   notifications?: boolean;
   profile?: boolean;
   maintenance_mode?: boolean;
+  
+  // Legacy/Feature specific flags to fix lint errors
+  show_trending?: boolean;
+  show_ai_pilot?: boolean;
+  show_market_insights?: boolean;
+  show_chat?: boolean;
+  allow_payments?: boolean;
+  allow_withdrawals?: boolean;
+  support?: boolean;
 }
 
 export function useAppConfig() {
@@ -22,7 +31,14 @@ export function useAppConfig() {
     referEarn: true,
     notifications: true,
     profile: true,
-    maintenance_mode: false
+    maintenance_mode: false,
+    show_trending: true,
+    show_ai_pilot: true,
+    show_market_insights: true,
+    show_chat: true,
+    allow_payments: true,
+    allow_withdrawals: true,
+    support: true
   });
 
   useEffect(() => {

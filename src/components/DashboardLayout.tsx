@@ -262,7 +262,7 @@ export default function DashboardLayout({ user, role }: Props) {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-x-hidden overflow-y-auto w-full max-w-2xl mx-auto px-4 pt-6 pb-24">
+      <main className="flex-1 overflow-x-hidden overflow-y-auto w-full max-w-2xl mx-auto px-4 pt-6 pb-20">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

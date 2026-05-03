@@ -183,7 +183,7 @@ export default function Profile() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5 pb-32">
+    <div className="max-w-2xl mx-auto space-y-5 pb-6">
       <header className="flex items-center justify-between px-2 pt-4">
         <h1 className="text-xl font-display font-bold tracking-tight">Settings</h1>
         <button 

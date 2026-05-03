@@ -168,7 +168,7 @@ export default function Wallet() {
   };
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-8">
       <header className="flex items-center justify-between px-1">
         <h1 className="text-xl font-display font-bold tracking-tight">Financial Wallet</h1>
         <div className="bg-white px-3 py-1.5 rounded-xl border border-gray-100 flex items-center gap-2">

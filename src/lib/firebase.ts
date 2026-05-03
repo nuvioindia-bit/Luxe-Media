@@ -2,50 +2,18 @@ import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer, enableIndexedDbPersistence, Firestore, enableNetwork } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-
-// Use environment variables if present (Netlify/Vercel/Production).
-// We check if the value is a real API key (usually starts with AIza or is long enough)
-const isEnvValid = (val: any) => {
-  if (!val || typeof val !== 'string') return false;
-  const v = val.trim();
-  if (v === '' || v === 'undefined' || v === 'null') return false;
-  return v.length > 10;
-};
-
-// Configuration prioritizing environment variables, falling back to rexotool defaults
-// HARDCODED FALLBACKS for Netlify/Production stability
-const firebaseConfig = {
-  apiKey: isEnvValid(import.meta.env.VITE_FIREBASE_API_KEY) ? import.meta.env.VITE_FIREBASE_API_KEY : 'AIzaSyC_h2j8rOdEUp3prN_VSyY1Dx2Fxzrx7UU',
-  authDomain: isEnvValid(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN) ? import.meta.env.VITE_FIREBASE_AUTH_DOMAIN : 'rexotool.firebaseapp.com',
-  projectId: isEnvValid(import.meta.env.VITE_FIREBASE_PROJECT_ID) ? import.meta.env.VITE_FIREBASE_PROJECT_ID : 'rexotool',
-  storageBucket: isEnvValid(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET) ? import.meta.env.VITE_FIREBASE_STORAGE_BUCKET : 'rexotool.firebasestorage.app',
-  messagingSenderId: isEnvValid(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID) ? import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID : '555700155865',
-  appId: isEnvValid(import.meta.env.VITE_FIREBASE_APP_ID) ? import.meta.env.VITE_FIREBASE_APP_ID : '1:555700155865:web:83721335b112d620e155c8',
-  databaseURL: 'https://rexotool-default-rtdb.asia-southeast1.firebasedatabase.app/'
-};
+import firebaseConfig from '../../firebase-applet-config.json';
 
 let app: FirebaseApp;
 try {
   app = initializeApp(firebaseConfig);
 } catch (error) {
-  console.warn("Firebase initialization warning:", error);
-  // Fail-safe empty app
-  app = initializeApp({
-    apiKey: "missing",
-    authDomain: "missing",
-    projectId: "missing",
-    storageBucket: "missing",
-    messagingSenderId: "missing",
-    appId: "missing"
-  });
+  console.error("Firebase initialization failed:", error);
+  throw error;
 }
 
-const databaseId = isEnvValid(import.meta.env.VITE_FIREBASE_DATABASE_ID) 
-  ? import.meta.env.VITE_FIREBASE_DATABASE_ID.trim() 
-  : '(default)';
-
 export const auth = getAuth(app);
-export const db: Firestore = getFirestore(app, databaseId);
+export const db: Firestore = getFirestore(app, firebaseConfig.firestoreDatabaseId || '(default)');
 export const storage = getStorage(app);
 
 /**

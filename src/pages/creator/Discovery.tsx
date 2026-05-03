@@ -77,7 +77,7 @@ export default function Discovery() {
   );
 
   return (
-    <div className="space-y-4 pb-24">
+    <div className="space-y-4 pb-8">
       <div className="flex flex-col gap-3">
         <h1 className="text-lg font-display font-bold tracking-tight px-1">Discover</h1>
         

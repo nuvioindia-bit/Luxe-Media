@@ -208,7 +208,7 @@ export default function AIPilot() {
       </div>
 
       {/* Input Section */}
-      <div className="p-4 bg-white border-t border-gray-100 pb-8">
+      <div className="p-4 bg-white border-t border-gray-100 pb-4">
         {messages.length < 3 && (
             <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar -mx-4 px-4">
                 {suggestions.map((s, i) => (

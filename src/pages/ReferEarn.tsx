@@ -43,91 +43,108 @@ export default function ReferEarn() {
   }
 
   return (
-    <div className="pb-24 max-w-lg mx-auto">
+    <div className="pb-8 max-w-lg mx-auto">
       {/* Header section with gradient */}
-      <div className="px-5 pt-8 pb-12 bg-gradient-to-b from-brand-primary to-[#0A3D91] text-white rounded-b-[2rem] shadow-xl relative overflow-hidden">
+      <div className="px-5 pt-8 pb-10 bg-gradient-to-br from-[#0A3D91] via-[#1E4D9C] to-[#0A3D91] text-white rounded-b-[2.5rem] shadow-2xl relative overflow-hidden">
          {/* Decorative elements */}
-         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10" />
-         <div className="absolute bottom-0 left-0 w-40 h-40 bg-brand-accent/20 rounded-full blur-3xl -ml-20 -mb-10" />
+         <div className="absolute top-[-10%] right-[-10%] w-48 h-48 bg-white/10 rounded-full blur-3xl" />
+         <div className="absolute bottom-[-20%] left-[-10%] w-64 h-64 bg-brand-accent/20 rounded-full blur-3xl" />
          
-         <div className="relative z-10 text-center">
-            <h1 className="text-3xl font-display font-bold mb-3">Refer & Earn</h1>
-            <p className="text-blue-100 px-4 text-sm leading-relaxed">
-              Invite creators to Rexo. When they complete their first campaign, you <span className="font-bold text-brand-accent">earn ₹50</span>!
+         <div className="relative z-10 text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full mb-4 border border-white/10">
+               <Gift className="w-3.5 h-3.5 text-brand-accent" />
+               <span className="text-[10px] font-black uppercase tracking-widest text-blue-100">Rewards Program</span>
+            </div>
+            <h1 className="text-3xl font-display font-black mb-2 tracking-tight">Refer & Earn</h1>
+            <p className="text-blue-100/80 px-8 text-xs font-medium leading-relaxed">
+              Scale the Rexo network and earn <span className="font-bold text-brand-accent">₹50</span> for every creator who completes their first campaign.
             </p>
          </div>
 
-         {/* Share Card - Float up slightly over the next section */}
-         <div className="absolute -bottom-6 left-0 right-0 px-5 translate-y-1/2 z-20">
-            <div className="bg-white rounded-2xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center mb-3">Your Referral Link</p>
-                <div className="flex gap-2">
-                    <div className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 flex items-center overflow-hidden">
-                        <span className="text-gray-900 font-mono text-sm truncate">{referralLink}</span>
-                    </div>
+         {/* Share Card */}
+         <div className="relative z-20 mx-1">
+            <div className="bg-white rounded-[2rem] p-6 shadow-2xl shadow-blue-950/20 border border-white">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Your Referral Link</span>
+                  <div className={cn(
+                    "px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all",
+                    copied ? "bg-emerald-100 text-emerald-600" : "bg-gray-100 text-gray-400"
+                  )}>
+                    {copied ? 'Link Copied!' : 'Tap to Copy'}
+                  </div>
+                </div>
+                
+                <div className="flex gap-2 mb-3">
                     <button 
                         onClick={copyToClipboard}
-                        className="w-12 h-12 bg-brand-primary/10 text-brand-primary rounded-xl flex items-center justify-center hover:bg-brand-primary hover:text-white transition-all"
+                        className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3.5 flex items-center overflow-hidden active:scale-[0.98] transition-all text-left"
                     >
-                        {copied ? <span className="text-xs font-bold w-full text-center">Copied</span> : <Copy className="w-5 h-5" />}
+                        <span className="text-gray-900 font-mono text-[11px] font-bold truncate opacity-60">{referralLink}</span>
+                    </button>
+                    <button 
+                        onClick={copyToClipboard}
+                        className="w-12 h-12 bg-[#0A3D91] text-white rounded-2xl flex items-center justify-center hover:bg-blue-800 active:scale-90 transition-all shadow-lg shadow-blue-900/20"
+                    >
+                        <Copy className="w-5 h-5" />
                     </button>
                 </div>
-                <button onClick={handleShare} className="w-full mt-3 bg-brand-accent text-brand-primary py-3.5 rounded-xl font-bold flex flex-row items-center justify-center gap-2">
-                    <Share2 className="w-4 h-4" /> Share with Friends
+                <button 
+                  onClick={handleShare} 
+                  className="w-full bg-brand-accent text-[#0A3D91] py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl shadow-amber-500/20"
+                >
+                    <Share2 size={16} /> Share Link
                 </button>
             </div>
          </div>
       </div>
 
-      {/* Spacer to account for floated card */}
-      <div className="h-28" />
-
-      {/* Stats Display */}
-      <div className="px-5 mb-8">
-          <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-center">
-                  <div className="w-10 h-10 bg-blue-50 text-brand-primary rounded-full flex items-center justify-center mb-2">
+      {/* Stats Display - More Compact */}
+      <div className="px-6 -mt-6 relative z-30 mb-8">
+          <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/80 backdrop-blur-md rounded-3xl p-4 shadow-xl shadow-black/5 border border-white flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-50 text-[#0A3D91] rounded-2xl flex items-center justify-center shrink-0">
                       <Users className="w-5 h-5" />
                   </div>
-                  <span className="text-2xl font-bold">0</span>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Total Referrals</span>
+                  <div>
+                    <span className="text-lg font-black text-gray-900 block leading-none">0</span>
+                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1 block">Referrals</span>
+                  </div>
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-center">
-                  <div className="w-10 h-10 bg-amber-50 text-brand-accent rounded-full flex items-center justify-center mb-2">
+              <div className="bg-white/80 backdrop-blur-md rounded-3xl p-4 shadow-xl shadow-black/5 border border-white flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-50 text-brand-accent rounded-2xl flex items-center justify-center shrink-0">
                       <Coins className="w-5 h-5" />
                   </div>
-                  <span className="text-2xl font-bold">₹0</span>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Total Earned</span>
+                  <div>
+                    <span className="text-lg font-black text-gray-900 block leading-none">₹0</span>
+                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest mt-1 block">Earnings</span>
+                  </div>
               </div>
           </div>
       </div>
 
-      {/* How it works */}
-      <div className="px-5">
-         <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">How it works</h3>
+      {/* How it works - Refined */}
+      <div className="px-8 flex flex-col items-center">
+         <div className="w-12 h-1 bg-gray-200 rounded-full mb-8"></div>
          
-         <div className="space-y-4">
-            <div className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center font-bold text-sm shrink-0">1</div>
-                <div>
-                    <h4 className="font-bold text-gray-900 text-sm">Share your link</h4>
-                    <p className="text-xs text-gray-500 mt-1">Send your unique referral link to creators who might be interested.</p>
-                </div>
-            </div>
-            <div className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center font-bold text-sm shrink-0">2</div>
-                <div>
-                    <h4 className="font-bold text-gray-900 text-sm">Friends join & verify</h4>
-                    <p className="text-xs text-gray-500 mt-1">When they create an account and complete their profile.</p>
-                </div>
-            </div>
-            <div className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-brand-accent/20 text-brand-accent flex items-center justify-center font-bold text-sm shrink-0">3</div>
-                <div>
-                    <h4 className="font-bold text-gray-900 text-sm">You both earn!</h4>
-                    <p className="text-xs text-gray-500 mt-1">Once they complete their first campaign, you get ₹50 directly in your wallet.</p>
-                </div>
-            </div>
+         <div className="w-full space-y-6">
+            {[
+              { step: '01', title: 'Share Link', desc: 'Spread your invite across your network.', icon: Share2, color: 'text-blue-500', bg: 'bg-blue-50' },
+              { step: '02', title: 'Join & Build', desc: 'Friends create profiles and join campaigns.', icon: Users, color: 'text-purple-500', bg: 'bg-purple-50' },
+              { step: '03', title: 'Collect ₹50', desc: 'Earnings arrive after their first success.', icon: Gift, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+            ].map((item, i) => (
+              <div key={i} className="flex gap-5 items-start">
+                  <div className={cn("w-12 h-12 rounded-[1.25rem] flex items-center justify-center shrink-0 shadow-sm border border-white", item.bg)}>
+                      <item.icon className={cn("w-5 h-5", item.color)} />
+                  </div>
+                  <div className="pt-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{item.step}</span>
+                        <h4 className="font-black text-gray-900 text-sm tracking-tight">{item.title}</h4>
+                      </div>
+                      <p className="text-[11px] font-medium text-gray-400 mt-1 leading-relaxed">{item.desc}</p>
+                  </div>
+              </div>
+            ))}
          </div>
       </div>
     </div>
