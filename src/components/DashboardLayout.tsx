@@ -48,31 +48,46 @@ export default function DashboardLayout({ user, role }: Props) {
     
     // Check if user is admin based on email
     const isAdmin = isAdminEmail(user?.email);
-    const notifRecipient = isAdmin ? 'admin' : user?.uid;
     
-    // Index Error Fix: We remove the orderBy cloud-side to avoid needing a composite index.
-    // We will sort the results in memory (JS side) instead.
-    const q = query(
-      collection(db, 'notifications'),
-      where('recipientId', '==', notifRecipient)
-    );
+    const unsubscribeFns: (() => void)[] = [];
+    const notifsMap = new Map<string, any>();
 
-    const unsubNotifs = onSnapshot(q, (snap) => {
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // Sort in-memory to resolve the Firebase "Index Required" crash
+    const updateNotifs = () => {
+      const docs = Array.from(notifsMap.values());
+      // Sort in-memory
       docs.sort((a: any, b: any) => {
-        const dateA = (a as any).createdAt?.toDate ? (a as any).createdAt.toDate() : new Date(0);
-        const dateB = (b as any).createdAt?.toDate ? (b as any).createdAt.toDate() : new Date(0);
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
         return dateB.getTime() - dateA.getTime();
       });
       setNotifications(docs);
-    }, (error) => {
-        console.error("Notifications Sync Error:", error);
-    });
+    };
+
+    // Personal notifications
+    const personalQuery = query(collection(db, 'notifications'), where('recipientId', '==', user.uid));
+    unsubscribeFns.push(onSnapshot(personalQuery, (snap) => {
+      snap.docChanges().forEach(change => {
+        if (change.type === 'removed') notifsMap.delete(change.doc.id);
+        else notifsMap.set(change.doc.id, { id: change.doc.id, ...change.doc.data() });
+      });
+      updateNotifs();
+    }, (error) => console.error("Notifications Sync Error:", error)));
+
+    // Admin notifications
+    if (isAdmin) {
+      const adminQuery = query(collection(db, 'notifications'), where('recipientId', '==', 'admin'));
+      unsubscribeFns.push(onSnapshot(adminQuery, (snap) => {
+        snap.docChanges().forEach(change => {
+          if (change.type === 'removed') notifsMap.delete(change.doc.id);
+          else notifsMap.set(change.doc.id, { id: change.doc.id, ...change.doc.data() });
+        });
+        updateNotifs();
+      }, (error) => console.error("Admin Notifications Sync Error:", error)));
+    }
 
     return () => {
       unsub();
-      unsubNotifs();
+      unsubscribeFns.forEach(fn => fn());
     };
   }, [user]);
 

@@ -93,7 +93,7 @@ export default function ApplicationReview() {
   const details = app.creatorDetails || {};
 
   return (
-    <div className="min-h-screen bg-[#F2F2F7] pb-24">
+    <div className="min-h-screen bg-[#F2F2F7] pb-32">
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-4 py-3 flex items-center gap-3 shadow-sm">
         <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
           <ArrowLeft className="w-4 h-4" />
@@ -208,7 +208,7 @@ export default function ApplicationReview() {
       </main>
 
       {/* Action Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 p-3 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex gap-2 z-50">
+      <footer className="fixed bottom-[72px] lg:bottom-0 left-0 right-0 p-3 pb-[calc(12px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-xl border-t border-gray-100 flex gap-2 z-50">
           {app.status === 'pending' ? (
             <>
               <button 
