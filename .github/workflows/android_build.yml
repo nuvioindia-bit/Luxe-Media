@@ -50,20 +50,15 @@ jobs:
       - name: Capacitor Sync
         run: npx cap sync android
 
-      # Verified Valid PNG download karke sabko overwrite karega taaki AAPT2 daemon crash na ho
-      - name: Auto-Fix Corrupt Assets via Verified Standard PNG
+      # ==========================================
+      # AUTOMATED CLOUD ICON GENERATOR
+      # ==========================================
+      - name: Generate Real Android Icons on Cloud
         run: |
-          echo "Downloading a 100% structurally valid PNG to prevent AAPT2 daemon crashes..."
-          curl -sL -o valid.png https://raw.githubusercontent.com/mathiasbynens/small/master/png-transparent.png
-          
-          echo "Overwriting all corrupt launcher icons..."
-          find android/app/src/main/res/ -name "ic_launcher*.png" -exec cp valid.png {} \;
-          
-          echo "Overwriting all corrupt splash screens..."
-          find android/app/src/main/res/ -name "splash*.png" -exec cp valid.png {} \;
-          
-          rm valid.png
-          echo "All asset compilation paths patched with verified valid PNG structures!"
+          echo "Installing Capacitor Assets Tool..."
+          npm install @capacitor/assets --save-dev
+          echo "Generating responsive Android icons from assets/icon.png..."
+          npx cap assets generate --android
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -76,13 +71,12 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      # AAPT2/Wrapper ko bypass karke direct Global Gradle se Release APK build
+      # Direct Global Gradle se Real Icon ke sath Release APK build
       - name: Build APK (Release)
         run: |
           cd android
           gradle assembleRelease
           
-      # Poore release folder ko upload kar rahe hain taaki saare genuine output APKs mil sakein
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
