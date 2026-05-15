@@ -53,18 +53,19 @@ jobs:
         run: npx cap sync android
 
       # =================================================================
-      # CASE-INSENSITIVE NATIVE ICON GENERATOR (FIXED FOR CAPITAL OR LOWERCASE)
+      # GLOBAL SMART ICON GENERATOR (FINDS ICON ANYWHERE IN THE REPO)
       # =================================================================
       - name: Generate Clean Production Icons from Real Icon
         run: |
-          echo "Wiping any old or corrupt launcher resources from android folder..."
+          echo "Wiping old launcher resources..."
           find android/app/src/main/res/ -name "ic_launcher*.png" -delete || true
           
-          # Case-insensitive tareeke se file dhoondh rahe hain (chahe Icon.png ho ya icon.png)
-          SRC_ICON=$(find assets/ -iname "icon.png" | head -n 1)
+          echo "Searching for icon.png globally across the project..."
+          # Yeh command poore project mein se icon dhoondh nikalegi, chahe path koi bhi ho
+          SRC_ICON=$(find . -type f -iname "icon.png" -not -path "*/node_modules/*" -not -path "*/android/*" | head -n 1)
           
           if [ -n "$SRC_ICON" ] && [ -f "$SRC_ICON" ]; then
-            echo "Found valid source icon at: $SRC_ICON. Processing..."
+            echo "Target icon located successfully at: $SRC_ICON"
             
             mkdir -p android/app/src/main/res/mipmap-mdpi
             mkdir -p android/app/src/main/res/mipmap-hdpi
@@ -92,9 +93,9 @@ jobs:
             convert "$SRC_ICON" -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
             convert "$SRC_ICON" -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
             
-            echo "Real brand icons generated with perfect production standards successfully!"
+            echo "Production icons processed cleanly!"
           else
-            echo "ERROR: No icon file found in assets folder with any casing!"
+            echo "ERROR: Could not find any icon.png or Icon.png file in this repository!"
             exit 1
           fi
 
@@ -109,7 +110,7 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      # Sahi icon aur smooth screen performance ke sath Release APK Build
+      # Final Release APK Build Step
       - name: Build APK (Release)
         run: |
           cd android
