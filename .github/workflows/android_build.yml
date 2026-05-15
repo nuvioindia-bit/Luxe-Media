@@ -52,6 +52,14 @@ jobs:
       - name: Capacitor Sync
         run: npx cap sync android
 
+      # =======================================================
+      # SYSTEM ENGINE INSTALLATION (FIXES CONVERT COMMAND ERROR)
+      # =======================================================
+      - name: Install ImageMagick Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
       # =================================================================
       # SMART ICON GENERATOR WITH AUTOMATIC FALLBACK (NEVER FAILS)
       # =================================================================
@@ -67,7 +75,6 @@ jobs:
             echo "Awesome! Real icon located at: $SRC_ICON"
           else
             echo "Real icon not found in repository paths. Creating a safe standard asset on the fly to guarantee build success..."
-            # Agar file nahi milti toh server khud ek valid blue gradient/solid image bana lega taaki build fail na ho
             convert -size 1024x1024 xc:#3b82f6 assets_fallback_icon.png || convert -size 1024x1024 xc:blue assets_fallback_icon.png
             SRC_ICON="assets_fallback_icon.png"
           fi
