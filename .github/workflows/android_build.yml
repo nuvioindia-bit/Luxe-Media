@@ -51,14 +51,15 @@ jobs:
         run: npx cap sync android
 
       # ==========================================
-      # AUTOMATED CLOUD ICON GENERATOR
+      # AUTOMATED CLOUD ICON GENERATOR (FIXED COMMAND)
       # ==========================================
       - name: Generate Real Android Icons on Cloud
         run: |
           echo "Installing Capacitor Assets Tool..."
           npm install @capacitor/assets --save-dev
-          echo "Generating responsive Android icons from assets/icon.png..."
-          npx cap assets generate --android
+          echo "Generating responsive Android icons..."
+          # Command ka naam fixed aur flag hata diya hai taaki crash na ho
+          npx capacitor-assets generate
 
       - name: Setup Java
         uses: actions/setup-java@v4
