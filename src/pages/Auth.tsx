@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { auth, db } from '../lib/firebase';
 import { 
   createUserWithEmailAndPassword,
@@ -125,33 +124,14 @@ export default function Auth() {
     }
   };
 
-  const staggerContainer = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  };
-
-  const itemFade = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0 }
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+      <div 
         className="w-full max-w-[340px] bg-white/70 dark:bg-gray-900/70 backdrop-blur-3xl border border-white/60 dark:border-gray-800/60 shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[2.5rem] p-8 relative z-10 hardware-accelerated"
         style={{ boxShadow: 'var(--shadow-skeuo)' }}
       >
-        {/* Logo Section */}
         <div className="flex flex-col items-center mb-10">
-          <motion.div 
-            whileHover={{ rotate: 10, scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+          <div 
             className="w-16 h-16 rounded-[1.5rem] flex items-center justify-center overflow-hidden shadow-sm border border-white/60 dark:border-gray-700/60 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md mb-4 skeuo-inner"
           >
             <img 
@@ -160,12 +140,11 @@ export default function Auth() {
               className="w-12 h-12 object-contain"
               referrerPolicy="no-referrer"
             />
-          </motion.div>
+          </div>
           <h1 className="font-display font-black text-3xl tracking-tighter text-gray-900">Rexo Tool</h1>
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mt-1.5">Creator Intelligence</p>
         </div>
 
-        {/* Form Selection */}
         <div className="p-1 bg-gray-100/50 backdrop-blur-md rounded-2xl mb-8 flex gap-1">
           <button 
             type="button"
@@ -184,15 +163,8 @@ export default function Auth() {
         </div>
 
         <form onSubmit={handleAuth} className="space-y-5">
-          <AnimatePresence mode="popLayout">
             {!isLogin && (
-              <motion.div
-                key="signup-fields"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-4"
-              >
+              <div className="space-y-4">
                 <div className="space-y-1.5">
                   <div className="relative group">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -219,9 +191,8 @@ export default function Auth() {
                     />
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
 
           <div className="space-y-1.5">
             <div className="relative group">
@@ -262,15 +233,8 @@ export default function Auth() {
             )}
           </div>
 
-          <AnimatePresence mode="popLayout">
             {!isLogin && (
-              <motion.div
-                key="confirm-password"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-1.5"
-              >
+              <div className="space-y-1.5">
                 <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input 
@@ -282,23 +246,16 @@ export default function Auth() {
                     required
                   />
                 </div>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
 
           {error && (
-            <motion.div 
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="p-3 bg-red-50/50 backdrop-blur-md text-red-600 text-[11px] rounded-xl border border-red-100/50 font-bold"
-            >
+            <div className="p-3 bg-red-50/50 backdrop-blur-md text-red-600 text-[11px] rounded-xl border border-red-100/50 font-bold">
               {error}
-            </motion.div>
+            </div>
           )}
 
-          <motion.button 
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.95 }}
+          <button 
             type="submit"
             disabled={loading}
             className="elite-button-primary w-full h-[42px] rounded-2xl text-[12px] shadow-xl shadow-gray-200/50"
@@ -311,7 +268,7 @@ export default function Auth() {
             ) : (
               <>Create Account <Sparkles className="w-4 h-4 ml-1" /></>
             )}
-          </motion.button>
+          </button>
         </form>
         
         <div className="mt-8 text-center">
@@ -328,7 +285,8 @@ export default function Auth() {
             )}
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
+

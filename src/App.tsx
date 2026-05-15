@@ -25,8 +25,6 @@ const AIPilot = lazy(() => import('./pages/AIPilot'));
 const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 const ReferEarn = lazy(() => import('./pages/ReferEarn'));
 const ApplicationReview = lazy(() => import('./pages/ApplicationReview'));
-const Inbox = lazy(() => import('./pages/Inbox'));
-const ChatDetail = lazy(() => import('./pages/ChatDetail'));
 const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const MetaInsights = lazy(() => import('./pages/MetaInsights'));
 
@@ -52,8 +50,6 @@ function AnimatedRoutes({ user, role }: { user: User | null, role: string | null
           <Route path="ai-pilot" element={<Suspense fallback={null}><AIPilot /></Suspense>} />
           <Route path="admin" element={<Suspense fallback={null}><AdminPanel /></Suspense>} />
           <Route path="review/:appId" element={<Suspense fallback={null}><ApplicationReview /></Suspense>} />
-          <Route path="inbox" element={<Suspense fallback={null}><Inbox /></Suspense>} />
-          <Route path="chat/:chatId" element={<Suspense fallback={null}><ChatDetail /></Suspense>} />
           <Route path="profile/:userId" element={<Suspense fallback={null}><PublicProfile /></Suspense>} />
           <Route path="insights" element={<Suspense fallback={null}><MetaInsights /></Suspense>} />
           <Route path="settings" element={<Suspense fallback={null}><SettingsMenu /></Suspense>} />
@@ -153,13 +149,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F2F2F7] dark:bg-[#0a0a0a]">
-        <motion.div 
-          animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="w-16 h-16 bg-brand-primary rounded-3xl"
-        />
-      </div>
+      <div className="h-[100dvh] w-full flex items-center justify-center bg-[#F2F2F7] dark:bg-[#000000]" />
     );
   }
 

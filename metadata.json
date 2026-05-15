@@ -1,6 +1,6 @@
 {
   "name": "Rexo App",
-  "description": "High-performance creator marketplace with real-time Agora video conferencing and integrated Meta social analytics.",
+  "description": "High-performance creator marketplace with integrated Meta social analytics.",
   "requestFramePermissions": ["camera", "microphone"],
   "majorCapabilities": []
 }

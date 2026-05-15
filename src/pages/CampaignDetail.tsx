@@ -305,9 +305,9 @@ export default function CampaignDetail() {
   }
 
   return (
-    <div className="space-y-6 pb-24 px-6 pt-6 h-full overflow-y-auto no-scrollbar relative z-10">
-      {/* Header */}
-      <header className="flex items-center justify-between gap-4">
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Fixed Sticky Header */}
+      <header className="shrink-0 flex items-center justify-between gap-4 px-6 pt-6 pb-4 bg-white/50 backdrop-blur-xl">
         <div className="flex items-center gap-4">
             <button 
             onClick={() => navigate(-1)}
@@ -332,66 +332,74 @@ export default function CampaignDetail() {
         )}
       </header>
 
-      {/* Hero Image */}
-      <div className="h-[180px] rounded-[2rem] overflow-hidden shadow-xl relative shrink-0">
-        <img src={campaign.image} alt={campaign.title} className="w-full h-full object-cover" />
-        <div className="absolute top-4 right-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl text-[10px] font-bold text-brand-primary dark:text-brand-secondary shadow-lg uppercase tracking-widest">
-            {campaign.category}
+      {/* Main SCrolling Content Area */}
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
+        <div className="space-y-6 px-6 pt-2">
+          {/* Hero Image */}
+          <div className="h-[180px] rounded-[2rem] overflow-hidden shadow-xl relative shrink-0">
+            <img src={campaign.image} alt={campaign.title} className="w-full h-full object-cover" />
+            <div className="absolute top-4 right-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl text-[10px] font-bold text-brand-primary dark:text-brand-secondary shadow-lg uppercase tracking-widest">
+                {campaign.category}
+            </div>
+          </div>
+          
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { icon: DollarSign, label: 'Total Budget', value: campaign.budget, color: 'text-brand-primary', bg: 'bg-blue-50' },
+              { 
+                icon: (props: any) => (
+                  <img 
+                    {...props}
+                    src="https://i.postimg.cc/DyJxL7mx/file-0000000008cc720b9d91dbcfd5fecf45.png" 
+                    alt="Logo" 
+                    className={cn("object-contain", props.className)}
+                    referrerPolicy="no-referrer"
+                  />
+                ), 
+                label: (campaign.campaignType === 'Music' || campaign.campaignType === 'UGC') ? 'Per Post' : 'CPM', 
+                value: `₹${campaign.cpm || 0}`, 
+                color: 'text-brand-accent', 
+                bg: 'bg-white dark:bg-gray-800'
+              },
+              { icon: Calendar, label: 'Timeline', value: campaign.timeline, color: 'text-amber-500', bg: 'bg-amber-50' },
+              { icon: MapPin, label: 'Location', value: campaign.location, color: 'text-green-500', bg: 'bg-green-50' }
+            ].map((stat, i) => (
+              <div key={i} className="premium-card p-3 flex items-center gap-3">
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", stat.bg)}>
+                    <stat.icon className={cn("w-4 h-4", stat.color)} />
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-gray-900 leading-tight">{stat.value}</div>
+                  <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{stat.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Description */}
+          <section className="premium-card p-6 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-brand-primary">Project Overview</h3>
+            <p className="text-gray-500 text-sm leading-relaxed whitespace-pre-wrap">
+              {campaign.description}
+            </p>
+
+            {campaign.driveLink && (
+              <div className="mt-6 p-4 bg-gray-50 border border-gray-100 rounded-xl">
+                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <LinkIcon className="w-3 h-3" /> Sample Brief / Assets
+                 </div>
+                 <a href={campaign.driveLink} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-brand-primary hover:underline flex items-center w-fit">
+                    Open in Google Drive
+                 </a>
+              </div>
+            )}
+          </section>
         </div>
       </div>
+      
+      {/* ... (rest of the sections remain same but moved out of the flex container) ... */}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { icon: DollarSign, label: 'Total Budget', value: campaign.budget, color: 'text-brand-primary', bg: 'bg-blue-50' },
-          { 
-            icon: (props: any) => (
-              <img 
-                {...props}
-                src="https://i.postimg.cc/DyJxL7mx/file-0000000008cc720b9d91dbcfd5fecf45.png" 
-                alt="Logo" 
-                className={cn("object-contain", props.className)}
-                referrerPolicy="no-referrer"
-              />
-            ), 
-            label: (campaign.campaignType === 'Music' || campaign.campaignType === 'UGC') ? 'Per Post' : 'CPM', 
-            value: `₹${campaign.cpm || 0}`, 
-            color: 'text-brand-accent', 
-            bg: 'bg-white dark:bg-gray-800'
-          },
-          { icon: Calendar, label: 'Timeline', value: campaign.timeline, color: 'text-amber-500', bg: 'bg-amber-50' },
-          { icon: MapPin, label: 'Location', value: campaign.location, color: 'text-green-500', bg: 'bg-green-50' }
-        ].map((stat, i) => (
-          <div key={i} className="premium-card p-3 flex items-center gap-3">
-            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", stat.bg)}>
-                <stat.icon className={cn("w-4 h-4", stat.color)} />
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-gray-900 leading-tight">{stat.value}</div>
-              <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{stat.label}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Description */}
-      <section className="premium-card p-6 space-y-4">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-brand-primary">Project Overview</h3>
-        <p className="text-gray-500 text-sm leading-relaxed whitespace-pre-wrap">
-          {campaign.description}
-        </p>
-
-        {campaign.driveLink && (
-          <div className="mt-6 p-4 bg-gray-50 border border-gray-100 rounded-xl">
-             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                <LinkIcon className="w-3 h-3" /> Sample Brief / Assets
-             </div>
-             <a href={campaign.driveLink} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-brand-primary hover:underline flex items-center w-fit">
-                Open in Google Drive
-             </a>
-          </div>
-        )}
-      </section>
 
       {/* Admin View: Campaign Controls */}
       {role === 'admin' && campaign.status === 'pending' && (
@@ -731,25 +739,25 @@ export default function CampaignDetail() {
                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">{campaign.title}</p>
             </div>
 
-            <form onSubmit={handleApply} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleApply} className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
                 <div className="col-span-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1 block">Full Identity</label>
-                  <input required type="text" className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3.5 px-4 text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all" value={applyForm.name} onChange={e => setApplyForm({...applyForm, name: e.target.value})} placeholder="Your Name" />
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.1em] ml-1 block">Full Identity</label>
+                  <input required type="text" className="w-full bg-gray-50 border border-gray-100 rounded-xl py-2 px-3 text-[11px] font-bold outline-none" value={applyForm.name} onChange={e => setApplyForm({...applyForm, name: e.target.value})} placeholder="Your Name" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1 block">Location</label>
-                  <input required type="text" className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3.5 px-4 text-xs font-bold outline-none" value={applyForm.location} onChange={e => setApplyForm({...applyForm, location: e.target.value})} placeholder="City" />
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.1em] ml-1 block">Location</label>
+                  <input required type="text" className="w-full bg-gray-50 border border-gray-100 rounded-xl py-2 px-3 text-[11px] font-bold outline-none" value={applyForm.location} onChange={e => setApplyForm({...applyForm, location: e.target.value})} placeholder="City" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1 block">Age</label>
-                  <input required type="number" className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3.5 px-4 text-xs font-bold outline-none" value={applyForm.age} onChange={e => setApplyForm({...applyForm, age: e.target.value})} placeholder="Age" />
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.1em] ml-1 block">Age</label>
+                  <input required type="number" className="w-full bg-gray-50 border border-gray-100 rounded-xl py-2 px-3 text-[11px] font-bold outline-none" value={applyForm.age} onChange={e => setApplyForm({...applyForm, age: e.target.value})} placeholder="Age" />
                 </div>
                 <div className="col-span-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1 block">Follower Base</label>
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.1em] ml-1 block">Follower Base</label>
                   <div className="flex gap-2">
-                    <input required type="text" className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl py-3.5 px-4 text-xs font-bold outline-none" value={applyForm.followers} onChange={e => setApplyForm({...applyForm, followers: e.target.value})} placeholder="e.g. 50k" />
-                    <select required className="bg-gray-50 border border-gray-100 rounded-2xl px-3 text-[10px] font-black uppercase tracking-widest outline-none" value={applyForm.platform} onChange={e => setApplyForm({...applyForm, platform: e.target.value})}>
+                    <input required type="text" className="flex-1 bg-gray-50 border border-gray-100 rounded-xl py-2 px-3 text-[11px] font-bold outline-none" value={applyForm.followers} onChange={e => setApplyForm({...applyForm, followers: e.target.value})} placeholder="e.g. 50k" />
+                    <select required className="bg-gray-50 border border-gray-100 rounded-xl px-2 text-[10px] font-black uppercase tracking-widest outline-none" value={applyForm.platform} onChange={e => setApplyForm({...applyForm, platform: e.target.value})}>
                         <option>Instagram</option>
                         <option>YouTube</option>
                         <option>X</option>
@@ -757,13 +765,13 @@ export default function CampaignDetail() {
                   </div>
                 </div>
                 <div className="col-span-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1 block">Profile Deep Link</label>
-                  <input required type="url" className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-3.5 px-4 text-xs font-bold outline-none" value={applyForm.socialLink} onChange={e => setApplyForm({...applyForm, socialLink: e.target.value})} placeholder="https://instagram.com/..." />
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.1em] ml-1 block">Profile Link</label>
+                  <input required type="url" className="w-full bg-gray-50 border border-gray-100 rounded-xl py-2 px-3 text-[11px] font-bold outline-none" value={applyForm.socialLink} onChange={e => setApplyForm({...applyForm, socialLink: e.target.value})} placeholder="https://instagram.com/..." />
                 </div>
               </div>
               
-              <div className="pt-6">
-                <button type="submit" disabled={applying} className="w-full bg-[#0A3D91] text-white py-4.5 rounded-[1.75rem] text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-900/30 active:scale-95 transition-all">
+              <div className="pt-2">
+                <button type="submit" disabled={applying} className="w-full bg-[#0A3D91] text-white py-3 rounded-xl text-[11px] font-black uppercase tracking-[0.15em] active:scale-95 transition-all">
                     {applying ? 'Submitting...' : 'Submit Application'}
                 </button>
               </div>

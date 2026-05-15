@@ -200,18 +200,6 @@ export default function DashboardLayout({ user, role }: Props) {
           </div>
           
           <div className="flex items-center gap-2 relative">
-            {config.inbox !== false && (
-              <button 
-                onClick={() => navigate('/dashboard/inbox')}
-                className="relative w-9 h-9 rounded-2xl flex items-center justify-center transition-all border bg-white/50 dark:bg-gray-900/50 text-gray-400 dark:text-gray-500 border-white/60 dark:border-gray-800 skeuo-inner tap-active"
-              >
-                <Send className="w-4 h-4 -rotate-12" />
-                <span className="absolute top-2 right-2 flex h-1.5 w-1.5">
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#FF3B5C]"></span>
-                </span>
-              </button>
-            )}
-            
             {/* Notifications and logout */}
             {config.notifications !== false && (
               <>

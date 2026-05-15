@@ -24,63 +24,31 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      # =======================================================
-      # HIGH-PERFORMANCE NATIVE LAYOUT LOCK (NO LAG / NO BOUNCE)
-      # =======================================================
-      - name: Automated Mobile View & GPU Optimized Layout
-        run: |
-          echo "Injecting viewport-fit=cover into HTML..."
-          if [ -f index.html ]; then
-            sed -i 's/<meta name="viewport" content="[^"]*"/<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/g' index.html
-          fi
-          if [ -f public/index.html ]; then
-            sed -i 's/<meta name="viewport" content="[^"]*"/<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/g' public/index.html
-          fi
-
-          echo "Enforcing smooth hardware-accelerated CSS containment..."
-          for css_file in src/index.css src/App.css src/main.css; do
-            if [ -f "$css_file" ]; then
-              echo -e "\n/* High-Performance Native Lock */\nhtml, body {\n  margin: 0 !important;\n  padding: 0 !important;\n  width: 100% !important;\n  height: 100dvh !important;\n  overflow: hidden !important;\n  position: fixed !important;\n  contain: strict !important;\n}\n#root {\n  width: 100% !important;\n  height: 100dvh !important;\n  max-width: 480px !important;\n  margin: 0 auto !important;\n  position: relative !important;\n  display: flex !important;\n  flex-direction: column !important;\n  overflow: hidden !important;\n  padding-top: env(safe-area-inset-top, 24px) !important;\n  padding-bottom: env(safe-area-inset-bottom, 12px) !important;\n  will-change: transform !important;\n}" >> "$css_file"
-            fi
-          done
-
-      - name: Build Web App (Production Mode)
-        run: |
-          # Source maps ko disable kar rahe hain taaki main bundle size chota aur fast ho jaye
-          export GENERATE_SOURCEMAP=false
-          npm run build
+      - name: Build Web App
+        run: npm run build
 
       - name: Capacitor Sync
         run: npx cap sync android
-
-      # Automated Cloud Asset Generator
-      - name: Generate Real Android Icons on Cloud
-        run: |
-          echo "Installing Capacitor Assets Tool..."
-          npm install @capacitor/assets --save-dev
-          echo "Generating responsive Android icons..."
-          npx capacitor-assets generate
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
+          
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x android/gradlew
 
-      - name: Setup Gradle System (Bypass Wrapper Jar)
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.13'
-
-      # Direct Global Gradle se Optimized Release APK build
       - name: Build APK (Release)
         run: |
           cd android
-          gradle assembleRelease
+          # Ensure wrapper files exist and are executable
+          chmod +x gradlew
+          # The wrapper will download the distribution defined in gradle-wrapper.properties
+          ./gradlew assembleRelease
           
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: android/app/build/outputs/apk/release/
-          
