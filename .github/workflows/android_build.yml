@@ -39,9 +39,13 @@ jobs:
       - name: Grant Execute Permission for Gradlew
         run: chmod +x android/gradlew
 
+      - name: Clean Gradle Wrapper
+        run: rm -rf android/gradle/wrapper/gradle-wrapper.jar
+
       - name: Build APK (Release)
         run: |
           cd android
+          ./gradlew wrapper --gradle-version 8.14.3
           ./gradlew assembleRelease
           
       - name: Upload APK Artifact
