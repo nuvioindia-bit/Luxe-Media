@@ -52,27 +52,50 @@ jobs:
       - name: Capacitor Sync
         run: npx cap sync android
 
-      # ==========================================
-      # AUTOMATED CLOUD ICON GENERATOR
-      # ==========================================
-      - name: Generate Real Android Icons on Cloud
+      # =================================================================
+      # DIRECT NATIVE ICON GENERATOR (BYPASS BUGGY THIRD-PARTY TOOLS)
+      # =================================================================
+      - name: Generate Clean Production Icons from Real Icon
         run: |
-          echo "Installing Capacitor Assets Tool..."
-          npm install @capacitor/assets --save-dev
-          echo "Generating responsive Android icons..."
-          npx capacitor-assets generate
-
-      # =======================================================
-      # CRITICAL FIX: STRIP AAPT2-KILLING METADATA FROM REAL ICONS
-      # =======================================================
-      - name: Strip Bad Color Profiles From Generated Icons
-        run: |
-          echo "Stripping invisible junk metadata chunks introduced by the generator tool..."
-          # Yeh command aapke real icons ko bina nuksan pahunchaye unka background metadata saaf kar degi
-          if [ -d android/app/src/main/res ]; then
-            find android/app/src/main/res/ -name "*.png" -exec mogrify -strip {} \; || true
+          echo "Wiping any old or corrupt launcher resources from android folder..."
+          find android/app/src/main/res/ -name "ic_launcher*.png" -delete || true
+          
+          if [ -f assets/icon.png ]; then
+            echo "Processing real assets/icon.png using pre-installed system ImageMagick..."
+            
+            # Target mipmap directories secure kar rahe hain
+            mkdir -p android/app/src/main/res/mipmap-mdpi
+            mkdir -p android/app/src/main/res/mipmap-hdpi
+            mkdir -p android/app/src/main/res/mipmap-xhdpi
+            mkdir -p android/app/src/main/res/mipmap-xxhdpi
+            mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+            
+            # Strict Android standard sizes generator (No extra metadata or bad color profiles)
+            convert assets/icon.png -resize 48x48! android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert assets/icon.png -resize 48x48! android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
+            convert assets/icon.png -resize 48x48! android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+            
+            convert assets/icon.png -resize 72x72! android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert assets/icon.png -resize 72x72! android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png
+            convert assets/icon.png -resize 72x72! android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+            
+            convert assets/icon.png -resize 96x96! android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert assets/icon.png -resize 96x96! android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png
+            convert assets/icon.png -resize 96x96! android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+            
+            convert assets/icon.png -resize 144x144! android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert assets/icon.png -resize 144x144! android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png
+            convert assets/icon.png -resize 144x144! android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+            
+            convert assets/icon.png -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            convert assets/icon.png -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
+            convert assets/icon.png -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+            
+            echo "Real brand icons generated with perfect production standards successfully!"
+          else
+            echo "ERROR: assets/icon.png not found!"
+            exit 1
           fi
-          echo "All real icons are now perfectly optimized for Android AAPT2 Compiler!"
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -85,7 +108,7 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      # Aapke asli icon aur optimized layout ke sath final Release APK Build
+      # Sahi icon aur smooth screen performance ke sath Release APK Build
       - name: Build APK (Release)
         run: |
           cd android
