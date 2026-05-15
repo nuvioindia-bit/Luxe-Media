@@ -42,6 +42,7 @@ jobs:
       - name: Build APK (Release)
         run: |
           cd android
+          ./gradlew wrapper --gradle-version 8.10.2
           ./gradlew assembleRelease
           
       - name: Upload APK Artifact
