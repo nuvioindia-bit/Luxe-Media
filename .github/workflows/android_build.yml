@@ -36,17 +36,15 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      # Yeh step GitHub ke machine par global Gradle engine install karega 
-      # Taaki hume us corrupt gradle-wrapper.jar ki zaroorat hi na pade!
+      # Yahan humne version badal kar 8.13 kar diya hai jo aapke project ki requirement hai
       - name: Setup Gradle System (Bypass Wrapper)
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: 8.7
+          gradle-version: '8.13'
 
       - name: Build APK via Global Gradle (No Wrapper Crash)
         run: |
           cd android
-          # `./gradlew` (wrapper) ko use karne ke bajaye hum direct `gradle` system command chalayenge
           gradle assembleRelease
           
       - name: Upload APK Artifact
