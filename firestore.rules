@@ -156,6 +156,38 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // --- Messages Rules (New Chat System) ---
+    match /chats/{chatId} {
+      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants || isAdmin());
+      allow create: if isSignedIn() && (request.auth.uid in incoming().participants);
+      allow update: if isSignedIn() && (request.auth.uid in resource.data.participants);
+      
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants || isAdmin());
+        allow create: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants) && incoming().senderId == request.auth.uid;
+        allow update: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants) && (
+          (existing().senderId == request.auth.uid) || 
+          (incoming().diff(existing()).affectedKeys().hasAny(['reactions', 'hiddenFor', 'isEdited', 'content', 'updatedAt']))
+        );
+        allow delete: if isSignedIn() && (existing().senderId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // --- Follows Rules ---
+    match /follows/{followId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().followerId == request.auth.uid;
+      allow delete: if isSignedIn() && (resource.data.followerId == request.auth.uid || isAdmin());
+      // For counting: allow list if querying by followingId or followerId
+      allow list: if isSignedIn();
+    }
+
+    // --- Poster Rules ---
+    match /posters/{posterId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // --- Global Logs for Admin ---
     match /transactions_log/{logId} {
         allow read, write: if isAdmin();

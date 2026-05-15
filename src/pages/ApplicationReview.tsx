@@ -93,10 +93,13 @@ export default function ApplicationReview() {
   const details = app.creatorDetails || {};
 
   return (
-    <div className="min-h-screen bg-[#F2F2F7] pb-32">
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-4 py-3 flex items-center gap-3 shadow-sm">
-        <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-          <ArrowLeft className="w-4 h-4" />
+    <div className="min-h-screen bg-[#F2F2F7] pb-44">
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-6 py-4 flex items-center gap-3 shadow-sm">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="w-[42px] h-[42px] rounded-2xl bg-white/50 border border-gray-100 flex items-center justify-center text-gray-900 shadow-sm active:scale-90 transition-all shrink-0"
+        >
+          <ArrowLeft size={20} />
         </button>
         <div>
           <h1 className="text-sm font-black tracking-tight">Review Application</h1>
@@ -104,9 +107,9 @@ export default function ApplicationReview() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto p-3 space-y-4 mt-2">
+      <main className="max-w-[85%] mx-auto p-3 space-y-4 mt-2">
         {/* Profile Card */}
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 text-center relative overflow-hidden">
+        <div className="bg-white rounded-3xl p-4.5 shadow-sm border border-gray-100 text-center relative overflow-hidden">
           <div className="relative z-10">
             <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3 border-2 border-white shadow-lg">
                <User className="w-7 h-7 text-indigo-500" />
@@ -123,7 +126,7 @@ export default function ApplicationReview() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
-           <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+           <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                  <div className="w-6 h-6 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500">
                     <Instagram className="w-3.5 h-3.5" />
@@ -133,7 +136,7 @@ export default function ApplicationReview() {
               <p className="text-base font-black text-gray-900">{details.followers || 'N/A'}</p>
               <p className="text-[8px] font-bold text-gray-400">On {details.platform}</p>
            </div>
-           <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+           <div className="bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                  <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500">
                     <Clock className="w-3.5 h-3.5" />
@@ -208,7 +211,7 @@ export default function ApplicationReview() {
       </main>
 
       {/* Action Footer */}
-      <footer className="fixed bottom-[72px] lg:bottom-0 left-0 right-0 p-3 pb-[calc(12px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-xl border-t border-gray-100 flex gap-2 z-50">
+      <footer className="fixed bottom-[80px] lg:bottom-0 left-0 right-0 p-3 pb-[calc(12px+env(safe-area-inset-bottom))] bg-white/80 backdrop-blur-xl border-t border-gray-100 flex gap-2 z-50">
           {app.status === 'pending' ? (
             <>
               <button 

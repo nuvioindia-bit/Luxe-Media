@@ -12,6 +12,8 @@
         "photoURL": { "type": "string" },
         "bio": { "type": "string" },
         "niche": { "type": "string" },
+        "followersCount": { "type": "number", "default": 0 },
+        "followingCount": { "type": "number", "default": 0 },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role"]
@@ -78,6 +80,61 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "amount", "method", "status"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "A conversation thread between two users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "lastMessage": { "type": "string" },
+        "lastSenderId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["participants", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "An individual message within a chat.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["text", "image"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "content", "type"]
+    },
+    "Follow": {
+      "title": "Follow",
+      "description": "A social relationship between users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "followerId": { "type": "string" },
+        "followingId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["followerId", "followingId"]
+    },
+    "Poster": {
+      "title": "Poster",
+      "description": "A promotional banner for the home page slider.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "title": { "type": "string" },
+        "link": { "type": "string" },
+        "order": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["imageUrl", "isActive"]
     }
   },
   "firestore": {
@@ -88,6 +145,10 @@
     "/applications/{applicationId}": { "schema": "Application", "description": "Global applications collection" },
     "/withdrawals/{withdrawalId}": { "schema": "Withdrawal", "description": "Global withdrawal requests" },
     "/notifications/{notificationId}": { "schema": "object", "description": "System notifications" },
-    "/app_config/main": { "schema": "object", "description": "Global platform settings" }
+    "/app_config/main": { "schema": "object", "description": "Global platform settings" },
+    "/chats/{chatId}": { "schema": "Chat", "description": "Conversations list" },
+    "/chats/{chatId}/messages/{messageId}": { "schema": "Message", "description": "Chat messages" },
+    "/follows/{followId}": { "schema": "Follow", "description": "User social connections" },
+    "/posters/{posterId}": { "schema": "Poster", "description": "Home page slider posters" }
   }
 }

@@ -11,6 +11,18 @@ export interface AppConfig {
   notifications?: boolean;
   profile?: boolean;
   maintenance_mode?: boolean;
+  inbox?: boolean;
+  publicProfile?: boolean;
+  metaInsights?: boolean;
+  brandDashboard?: boolean;
+  reviews?: boolean;
+  comments?: boolean;
+  fileUploads?: boolean;
+  pushNotifications?: boolean;
+  withdrawal_requests?: boolean;
+  dark_mode?: boolean;
+  social_login?: boolean;
+  analytics?: boolean;
   
   // Legacy/Feature specific flags to fix lint errors
   show_trending?: boolean;
@@ -32,6 +44,18 @@ export function useAppConfig() {
     notifications: true,
     profile: true,
     maintenance_mode: false,
+    inbox: true,
+    publicProfile: true,
+    metaInsights: true,
+    brandDashboard: true,
+    reviews: true,
+    comments: true,
+    fileUploads: true,
+    pushNotifications: true,
+    withdrawal_requests: true,
+    dark_mode: false,
+    social_login: true,
+    analytics: true,
     show_trending: true,
     show_ai_pilot: true,
     show_market_insights: true,

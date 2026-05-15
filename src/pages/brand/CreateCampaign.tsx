@@ -215,7 +215,7 @@ export default function CreateCampaign() {
   };
 
   const ProgressBanner = () => (
-    <div className="flex justify-center mb-10">
+    <div className="flex justify-center mb-6">
         <div className="flex items-center gap-3">
             {[1, 2, 3].map(i => (
                 <div key={i} className="flex items-center">
@@ -238,7 +238,7 @@ export default function CreateCampaign() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto pb-20">
+    <div className="max-w-[85%] mx-auto pb-20">
       {step < 4 && (
         <div className="flex items-center gap-2 mb-6">
             <button 
@@ -260,8 +260,8 @@ export default function CreateCampaign() {
         className="premium-card p-6"
       >
         {step === 1 && (
-          <div className="space-y-4">
-            <div className="space-y-1.5 text-center mb-8">
+          <div className="space-y-3">
+            <div className="space-y-1 text-center mb-4">
                 <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-brand-primary mx-auto mb-3">
                     <Rocket className="w-6 h-6" />
                 </div>
@@ -269,7 +269,7 @@ export default function CreateCampaign() {
                 <p className="text-gray-500 text-xs">Define the core mission of your collaboration.</p>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
                 <div className="space-y-1">
                     <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 ml-1">Campaign Title</label>
                     <input 
@@ -285,65 +285,67 @@ export default function CreateCampaign() {
                     {errors.title && <p className="text-[10px] font-bold text-red-500 mt-1 ml-1">{errors.title}</p>}
                 </div>
 
+            <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
                     <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 ml-1">Platform</label>
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                        {platforms.map(plat => (
-                            <button 
-                                key={plat}
-                                onClick={() => setFormData({...formData, platform: plat})}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all",
-                                    formData.platform === plat ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                                )}
-                            >
-                                {plat}
-                            </button>
-                        ))}
+                    <div className="relative">
+                        <select 
+                            value={formData.platform}
+                            onChange={(e) => setFormData({...formData, platform: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all font-bold text-[11px] appearance-none cursor-pointer"
+                        >
+                            {platforms.map(plat => (
+                                <option key={plat} value={plat}>{plat}</option>
+                            ))}
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                            <ChevronRight className="w-3 h-3 rotate-90" />
+                        </div>
                     </div>
                 </div>
 
                 <div className="space-y-1">
-                    <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 ml-1">Campaign Type</label>
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                        {campaignTypes.map(type => (
-                            <button 
-                                key={type}
-                                onClick={() => setFormData({...formData, campaignType: type})}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all",
-                                    formData.campaignType === type ? "bg-amber-600 text-white shadow-md shadow-amber-600/20" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                                )}
-                            >
-                                {type}
-                            </button>
-                        ))}
+                    <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 ml-1">Type</label>
+                    <div className="relative">
+                        <select 
+                            value={formData.campaignType}
+                            onChange={(e) => setFormData({...formData, campaignType: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all font-bold text-[11px] appearance-none cursor-pointer"
+                        >
+                            {campaignTypes.map(type => (
+                                <option key={type} value={type}>{type}</option>
+                            ))}
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                            <ChevronRight className="w-3 h-3 rotate-90" />
+                        </div>
                     </div>
                 </div>
 
                 <div className="space-y-1">
                     <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 ml-1">Category</label>
-                    <div className="flex flex-wrap gap-1.5">
-                        {categories.map(cat => (
-                            <button 
-                                key={cat}
-                                onClick={() => setFormData({...formData, category: cat})}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all",
-                                    formData.category === cat ? "bg-brand-primary text-white shadow-md shadow-brand-primary/20" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                                )}
-                            >
-                                {cat}
-                            </button>
-                        ))}
+                    <div className="relative">
+                        <select 
+                            value={formData.category}
+                            onChange={(e) => setFormData({...formData, category: e.target.value})}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all font-bold text-[11px] appearance-none cursor-pointer"
+                        >
+                            {categories.map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                            <ChevronRight className="w-3 h-3 rotate-90" />
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <div className="space-y-1 pt-2">
+                <div className="space-y-1 pt-1">
                     <label className="text-[9px] font-bold uppercase tracking-widest text-gray-400 ml-1">Cover Image</label>
                      <div className="relative group">
                         <label className={cn(
-                            "flex flex-col items-center justify-center w-full aspect-[21/9] rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden",
+                            "flex flex-col items-center justify-center w-full aspect-[21/10] rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden",
                             formData.image ? "border-brand-primary" : "border-gray-100 hover:border-brand-primary/40 bg-gray-50/50"
                         )}>
                             {uploading ? (
@@ -377,7 +379,7 @@ export default function CreateCampaign() {
             <button 
                 onClick={nextStep}
                 disabled={!formData.title || !formData.image}
-                className="premium-button-primary w-full mt-8 py-4 flex items-center justify-center gap-1.5 group"
+                className="premium-button-primary w-full mt-4 py-4 flex items-center justify-center gap-1.5 group"
             >
                 Next Step
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

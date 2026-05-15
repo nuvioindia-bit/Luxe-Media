@@ -9,6 +9,7 @@ import {
   CreditCard, 
   Smartphone, 
   History,
+  TrendingUp,
   CheckCircle2,
   AlertCircle,
   X
@@ -168,135 +169,101 @@ export default function Wallet() {
   };
 
   return (
-    <div className="space-y-6 pb-8">
-      <header className="flex items-center justify-between px-1">
-        <h1 className="text-xl font-display font-bold tracking-tight">Financial Wallet</h1>
-        <div className="bg-white px-3 py-1.5 rounded-xl border border-gray-100 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Active</span>
+    <div className="space-y-6 pb-24 px-6 pt-6">
+      <header className="flex items-center justify-between">
+        <h1 className="text-xl font-display font-black tracking-tighter text-gray-900 dark:text-white">Wallet</h1>
+        <div className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/60 dark:border-gray-700/60 flex items-center gap-2 shadow-sm skeuo-inner">
+            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Active</span>
         </div>
       </header>
 
-      {/* Balance Card */}
+      {/* Balance Card - Elite Design */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="premium-card bg-gradient-to-br from-brand-primary to-[#2D5BFF] p-6 text-white border-0 overflow-hidden relative"
+        className="premium-card bg-gray-900 p-5 text-white border-0 overflow-hidden relative shadow-2xl rounded-[2rem] h-[150px] flex flex-col justify-between"
       >
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-[40px] -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-brand-accent/20 blur-[30px] translate-y-1/2 -translate-x-1/2" />
+        <div className="absolute top-0 right-0 w-40 h-40 bg-brand-primary/20 blur-[60px] -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/20 blur-[40px] translate-y-1/2 -translate-x-1/2" />
         
         <div className="relative z-10">
-            <div className="flex justify-between items-start mb-8">
-                <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/70 mb-1">Available Balance</p>
-                    <h2 className="text-4xl font-display font-bold tracking-tight">₹{balance.toLocaleString('en-IN')}</h2>
-                </div>
-                <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center">
-                    <WalletIcon className="w-5 h-5" />
-                </div>
-            </div>
-            
-            <div className="flex gap-3">
-                <button 
-                    onClick={() => setShowWithdrawModal(true)}
-                    disabled={balance < 100 || config.allow_withdrawals === false}
-                    className="flex-1 bg-white text-brand-primary py-3 rounded-xl text-xs font-bold shadow-lg shadow-black/10 active:scale-95 transition-transform disabled:opacity-50"
-                >
-                    {config.allow_withdrawals === false ? 'Service Suspended' : 'Withdraw Funds'}
-                </button>
-                <button className="px-4 bg-white/20 backdrop-blur-md text-white rounded-xl active:scale-95 transition-transform flex items-center justify-center">
-                    <Plus className="w-5 h-5" />
-                </button>
-            </div>
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-0.5">Available Funds</p>
+            <h2 className="text-3xl font-black tracking-tighter">₹{balance.toLocaleString('en-IN')}</h2>
+        </div>
+        
+        <div className="relative z-10 flex gap-2">
+            <button 
+                onClick={() => setShowWithdrawModal(true)}
+                disabled={balance < 100 || config.allow_withdrawals === false}
+                className="flex-1 elite-button-primary rounded-xl text-[10px] font-black uppercase tracking-widest h-[40px] disabled:opacity-50"
+            >
+                {config.allow_withdrawals === false ? 'Service Suspended' : 'Redeem Now'}
+            </button>
+            <button className="w-[40px] h-[40px] bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/10 active:scale-90 transition-all">
+                <Plus className="w-5 h-5" />
+            </button>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-2 gap-4">
+      {/* Stats - Bento 2.0 */}
+      <div className="grid grid-cols-2 gap-3">
         {[
-          { label: 'Total Earnings', value: `₹${totalEarned.toLocaleString('en-IN')}`, icon: ArrowUpCircle, color: 'text-green-500', bg: 'bg-green-50' }
+          { label: 'Total Earnings', value: `₹${totalEarned.toLocaleString('en-IN')}`, icon: TrendingUp, color: 'text-emerald-500 dark:text-emerald-400' },
+          { label: 'Withdrawals', value: `0`, icon: ArrowDownCircle, color: 'text-red-500 dark:text-red-400' }
         ].map((stat, i) => (
-          <div key={i} className="premium-card p-4 flex flex-col items-center text-center col-span-2">
-            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-3", stat.bg)}>
+          <div key={i} className="bento-card p-4 rounded-2xl flex flex-col justify-between h-[100px] border border-white/60 dark:border-gray-800">
+            <div className="flex justify-between items-start">
                 <stat.icon className={cn("w-4 h-4", stat.color)} />
             </div>
-            <div className="text-lg font-display font-bold text-gray-900">{stat.value}</div>
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">{stat.label}</p>
+            <div>
+                <div className="text-xl font-black text-gray-900 dark:text-white leading-none">{stat.value}</div>
+                <div className="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-1">{stat.label}</div>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Methods */}
-      <section className="space-y-3">
-        <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 px-1">Withdrawal Methods</h3>
-        <div className="grid grid-cols-1 gap-2">
-            {[
-                { id: 'upi', name: 'UPI Transfer', desc: 'Instant Payout', icon: Smartphone, color: 'text-brand-accent', bg: 'bg-amber-50' },
-                { id: 'bank', name: 'Bank Transfer', desc: '2-3 Business Days', icon: CreditCard, color: 'text-brand-primary', bg: 'bg-blue-50' }
-            ].map(method => (
-                <div 
-                    key={method.name} 
-                    onClick={() => {
-                        setWithdrawType(method.id as 'upi' | 'bank');
-                        setShowWithdrawModal(true);
-                    }}
-                    className="premium-card p-3 flex items-center justify-between group hover:border-brand-primary/20 transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-[0.98]"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", method.bg)}>
-                            <method.icon className={cn("w-5 h-5", method.color)} />
-                        </div>
-                        <div>
-                            <div className="text-xs font-bold text-gray-900">{method.name}</div>
-                            <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{method.desc}</div>
-                        </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-brand-primary" />
-                </div>
-            ))}
-        </div>
-      </section>
-
-      <section className="space-y-3">
+      {/* Activity Section */}
+      <section className="space-y-4">
         <div className="flex items-center justify-between px-1">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Recent Activity</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">Activity History</h3>
+            <History className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
             {transactions.map(tx => (
-                <div key={tx.id} className="premium-card p-3 flex items-center justify-between bg-white border-gray-50">
-                    <div className="flex gap-3 items-center">
+                <div key={tx.id} className="premium-card p-4 flex items-center justify-between rounded-2xl group transition-all hover:scale-[1.02]">
+                    <div className="flex gap-4 items-center">
                         <div className={cn(
-                            "w-8 h-8 rounded-lg flex items-center justify-center",
-                            (tx.type === 'earning' || tx.type === 'credit') ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-500'
+                            "w-10 h-10 rounded-xl flex items-center justify-center skeuo-inner",
+                            (tx.type === 'earning' || tx.type === 'credit') ? 'bg-emerald-50 text-emerald-500 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-400'
                         )}>
-                            {(tx.type === 'earning' || tx.type === 'credit') ? <ArrowUpCircle className="w-4 h-4" /> : <ArrowDownCircle className="w-4 h-4" />}
+                            {(tx.type === 'earning' || tx.type === 'credit') ? <ArrowUpCircle size={18} /> : <ArrowDownCircle size={18} />}
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-gray-900 leading-none mb-1">{tx.title}</p>
+                            <p className="text-[12px] font-black text-gray-900 dark:text-white leading-none mb-1.5 uppercase tracking-wide">{tx.title}</p>
                             <div className="flex items-center gap-2">
-                                <p className="text-[8px] font-semibold text-gray-400 uppercase tracking-widest">{tx.status}</p>
-                                {tx.timestamp && (
-                                    <>
-                                        <span className="w-1 h-1 bg-gray-200 rounded-full" />
-                                        <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">
-                                            {tx.timestamp?.toDate ? tx.timestamp.toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'Recent'}
-                                        </p>
-                                    </>
-                                )}
+                                <span className={cn(
+                                    "text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-md",
+                                    tx.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                                )}>{tx.status}</span>
+                                <span className="text-[8px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest">
+                                    {tx.timestamp?.toDate ? tx.timestamp.toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'Just now'}
+                                </span>
                             </div>
                         </div>
                     </div>
                     <div className={cn(
-                        "text-xs font-display font-bold",
-                        (tx.type === 'earning' || tx.type === 'credit') ? 'text-green-500' : 'text-gray-900'
+                        "text-sm font-black tracking-tight",
+                        (tx.type === 'earning' || tx.type === 'credit') ? 'text-emerald-500 dark:text-emerald-400' : 'text-gray-900 dark:text-white'
                     )}>
                         {(tx.type === 'earning' || tx.type === 'credit') ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
                     </div>
                 </div>
             ))}
             {transactions.length === 0 && (
-                <div className="py-10 text-center border-2 border-dashed border-gray-100 rounded-3xl">
-                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">No Activity Yet</p>
+                <div className="py-12 text-center skeuo-inner rounded-[2rem] border border-white/60 dark:border-gray-800">
+                    <p className="text-gray-300 dark:text-gray-600 text-[9px] font-black uppercase tracking-[0.2em]">Safely processing...</p>
                 </div>
             )}
         </div>
@@ -317,7 +284,7 @@ export default function Wallet() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-sm bg-white rounded-[2rem] p-6 shadow-2xl"
+              className="relative w-full max-w-sm bg-white dark:bg-gray-900 rounded-[2rem] p-6 shadow-2xl border border-gray-100 dark:border-gray-800"
             >
               <button 
                 onClick={() => setShowWithdrawModal(false)}

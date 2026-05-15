@@ -234,8 +234,8 @@ export default function CampaignDetail() {
       await addDoc(collection(db, 'notifications'), {
         recipientId: campaign.brandId,
         type: 'application',
-        title: 'Naya Application 🚀',
-        message: `Naya Application: ${applyForm.name || auth.currentUser?.email} ne aapke ${campaign.title} ke liye apply kiya hai.`,
+        title: 'New Application 🚀',
+        message: `${applyForm.name || auth.currentUser?.email} has applied for your campaign: ${campaign.title}.`,
         createdAt: serverTimestamp(),
         referenceId: docRef.id,
         read: false
@@ -289,7 +289,7 @@ export default function CampaignDetail() {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center">
         <div className="w-10 h-10 border-4 border-gray-100 border-t-brand-primary rounded-full animate-spin mb-4" />
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Loading Experience</p>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Loading campaign</p>
       </div>
     );
   }
@@ -305,19 +305,19 @@ export default function CampaignDetail() {
   }
 
   return (
-    <div className="space-y-6 pb-24 max-w-2xl mx-auto">
+    <div className="space-y-6 pb-24 px-6 pt-6 h-full overflow-y-auto no-scrollbar relative z-10">
       {/* Header */}
-      <header className="flex items-center justify-between gap-4 px-1">
+      <header className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
             <button 
             onClick={() => navigate(-1)}
-            className="p-2 bg-white rounded-xl border border-gray-100 shadow-sm active:scale-95"
+            className="w-[42px] h-[42px] bg-white/50 dark:bg-gray-800/50 border border-white/60 dark:border-gray-700/60 rounded-2xl flex items-center justify-center text-gray-900 dark:text-gray-100 shadow-sm skeuo-inner active:scale-90 transition-all shrink-0"
             >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft size={20} />
             </button>
             <div>
-            <h1 className="text-lg font-display font-bold truncate max-w-[200px]">{campaign.title}</h1>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{campaign.brandName || campaign.brand || 'Brand'}</p>
+            <h1 className="text-lg font-display font-black tracking-tight truncate max-w-[200px]">{campaign.title}</h1>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">{campaign.brandName || campaign.brand || 'Brand'}</p>
             </div>
         </div>
         {(role === 'admin' || (role === 'brand' && campaign.brandId === auth.currentUser?.uid)) && (
@@ -333,9 +333,9 @@ export default function CampaignDetail() {
       </header>
 
       {/* Hero Image */}
-      <div className="aspect-[16/9] rounded-[2rem] overflow-hidden shadow-xl relative">
+      <div className="h-[180px] rounded-[2rem] overflow-hidden shadow-xl relative shrink-0">
         <img src={campaign.image} alt={campaign.title} className="w-full h-full object-cover" />
-        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl text-[10px] font-bold text-brand-primary shadow-lg uppercase tracking-widest">
+        <div className="absolute top-4 right-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl text-[10px] font-bold text-brand-primary dark:text-brand-secondary shadow-lg uppercase tracking-widest">
             {campaign.category}
         </div>
       </div>
@@ -357,7 +357,7 @@ export default function CampaignDetail() {
             label: (campaign.campaignType === 'Music' || campaign.campaignType === 'UGC') ? 'Per Post' : 'CPM', 
             value: `₹${campaign.cpm || 0}`, 
             color: 'text-brand-accent', 
-            bg: 'bg-white' 
+            bg: 'bg-white dark:bg-gray-800'
           },
           { icon: Calendar, label: 'Timeline', value: campaign.timeline, color: 'text-amber-500', bg: 'bg-amber-50' },
           { icon: MapPin, label: 'Location', value: campaign.location, color: 'text-green-500', bg: 'bg-green-50' }
@@ -445,7 +445,7 @@ export default function CampaignDetail() {
                 });
                 setCampaign({...campaign, status: 'rejected'});
               }}
-              className="flex-1 py-3 bg-white border border-red-100 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest"
+              className="flex-1 py-3 bg-white dark:bg-gray-800 border border-red-100 dark:border-red-900/30 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest"
             >
               Reject
             </button>
@@ -620,14 +620,14 @@ export default function CampaignDetail() {
 
       {/* Action Zone for Creators */}
       {role === 'creator' && (
-        <section className="sticky bottom-6 left-0 right-0 p-3 bg-white/80 backdrop-blur-2xl border border-white/50 z-40 max-w-lg mx-auto rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] mb-8 mx-4">
+        <section className="sticky bottom-6 left-0 right-0 p-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl border border-white/50 dark:border-gray-800 z-40 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] mb-8">
         <div className="flex gap-3">
           {!application ? (
             <button 
               onClick={() => setShowApplyModal(true)}
               className="flex-1 bg-brand-primary text-white py-4 rounded-[1.75rem] text-[13px] font-black uppercase tracking-[0.15em] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl shadow-brand-primary/20"
             >
-              <div className="w-5 h-5 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center backdrop-blur-sm border border-white/20">
+              <div className="w-5 h-5 rounded-lg overflow-hidden bg-white/10 dark:bg-gray-800/10 flex items-center justify-center backdrop-blur-sm border border-white/20 dark:border-gray-700/20">
                 <Zap className="w-3.5 h-3.5 text-brand-accent fill-brand-accent" />
               </div> Join Campaign
             </button>
@@ -714,7 +714,7 @@ export default function CampaignDetail() {
           <motion.div 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="bg-white rounded-[3rem] p-8 w-full max-w-sm relative shadow-2xl"
+            className="bg-white dark:bg-gray-900 rounded-[3rem] p-8 w-full max-w-sm relative shadow-2xl border border-gray-100 dark:border-gray-800"
           >
             <button 
               onClick={() => setShowApplyModal(false)}
@@ -764,7 +764,7 @@ export default function CampaignDetail() {
               
               <div className="pt-6">
                 <button type="submit" disabled={applying} className="w-full bg-[#0A3D91] text-white py-4.5 rounded-[1.75rem] text-xs font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-900/30 active:scale-95 transition-all">
-                    {applying ? 'Sending Identity...' : 'Confirm Registration'}
+                    {applying ? 'Submitting...' : 'Submit Application'}
                 </button>
               </div>
             </form>
@@ -778,7 +778,7 @@ export default function CampaignDetail() {
            <motion.div 
              initial={{ scale: 0.95, opacity: 0 }}
              animate={{ scale: 1, opacity: 1 }}
-             className="bg-white rounded-[2rem] p-6 w-full max-w-sm text-center relative"
+             className="bg-white dark:bg-gray-900 rounded-[2rem] p-6 w-full max-w-sm text-center relative border border-gray-100 dark:border-gray-800"
            >
              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center text-red-500 mx-auto mb-4">
                  <AlertTriangle className="w-8 h-8" />
@@ -799,7 +799,7 @@ export default function CampaignDetail() {
            <motion.div 
              initial={{ scale: 0.95, opacity: 0 }}
              animate={{ scale: 1, opacity: 1 }}
-             className="bg-white rounded-[2rem] p-6 w-full max-w-md relative max-h-[90vh] overflow-y-auto"
+             className="bg-white dark:bg-gray-900 rounded-[2rem] p-6 w-full max-w-md relative max-h-[90vh] overflow-y-auto border border-gray-100 dark:border-gray-800"
            >
              <button onClick={() => setShowEditModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-900">
                 <X className="w-6 h-6" />
@@ -833,7 +833,7 @@ export default function CampaignDetail() {
                  <div className="flex gap-4">
                     <div className="flex-1">
                         <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 block">Category</label>
-                        <select required className="premium-input w-full appearance-none bg-white font-medium text-sm" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})}>
+                        <select required className="premium-input w-full appearance-none bg-white dark:bg-gray-900 font-medium text-sm text-gray-900 dark:text-white" value={editForm.category} onChange={e => setEditForm({...editForm, category: e.target.value})}>
                             <option value="Meme">Meme</option>
                             <option value="Tech">Tech</option>
                             <option value="Comedy">Comedy</option>
@@ -845,7 +845,7 @@ export default function CampaignDetail() {
                  <div className="flex gap-4">
                     <div className="flex-1">
                         <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1 mb-2 block">Platform</label>
-                        <select required className="premium-input w-full appearance-none bg-white font-medium text-sm" value={editForm.platform} onChange={e => setEditForm({...editForm, platform: e.target.value})}>
+                        <select required className="premium-input w-full appearance-none bg-white dark:bg-gray-900 font-medium text-sm text-gray-900 dark:text-white" value={editForm.platform} onChange={e => setEditForm({...editForm, platform: e.target.value})}>
                             <option value="Instagram">Instagram</option>
                             <option value="YouTube">YouTube</option>
                             <option value="Facebook">Facebook</option>

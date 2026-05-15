@@ -23,7 +23,12 @@ import {
   Clock,
   ExternalLink,
   RefreshCw,
-  MoreHorizontal
+  MoreHorizontal,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  Plus,
+  Trash,
+  MessageSquare // Added MessageSquare here
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -39,7 +44,8 @@ import {
   addDoc,
   runTransaction
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, handleFirestoreError, OperationType, storage } from '../lib/firebase';
 import { isAdminEmail } from '../constants';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -51,6 +57,7 @@ export default function AdminPanel() {
   const [users, setUsers] = useState<any[]>([]);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [posters, setPosters] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [search, setSearch] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -59,6 +66,16 @@ export default function AdminPanel() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
   const [adFilter, setAdFilter] = useState<'all' | 'pending' | 'active' | 'rejected'>('pending');
+  const [showPosterForm, setShowPosterForm] = useState(false);
+  const [editingPosterId, setEditingPosterId] = useState<string | null>(null);
+  const [posterForm, setPosterForm] = useState({
+    title: '',
+    imageUrl: '',
+    link: '',
+    order: 0,
+    isActive: true
+  });
+  const [uploadLoading, setUploadLoading] = useState(false);
 
   useEffect(() => {
     const unsubUsers = onSnapshot(query(collection(db, 'users'), orderBy('createdAt', 'desc')), (snap) => {
@@ -73,8 +90,103 @@ export default function AdminPanel() {
       setWithdrawals(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    return () => { unsubUsers(); unsubCampaigns(); unsubWithdrawals(); };
+    const unsubPosters = onSnapshot(query(collection(db, 'posters'), orderBy('order', 'asc')), (snap) => {
+      setPosters(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    return () => { unsubUsers(); unsubCampaigns(); unsubWithdrawals(); unsubPosters(); };
   }, []);
+
+  const handlePosterUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadLoading(true);
+    try {
+      // Use Firebase Storage for robust uploads
+      const storageRef = ref(storage, `posters/${Date.now()}_${file.name}`);
+      const uploadRes = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(uploadRes.ref);
+      setPosterForm({ ...posterForm, imageUrl: url });
+      // Clear input so same file can be uploaded again if needed
+      e.target.value = '';
+      console.log('Poster uploaded to storage:', url);
+    } catch (err: any) {
+      console.error('Firebase Storage upload failed, trying base64 fallback:', err);
+      
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async (event) => {
+        const base64 = event.target?.result as string;
+        // Limit base64 to ~800KB to stay within Firestore 1MB limit comfortably
+        if (base64.length > 800000) { 
+          alert("Image is too large. Since cloud storage failed, please use an image smaller than 500KB for base64 fallback.");
+          setUploadLoading(false);
+          return;
+        }
+        setPosterForm({ ...posterForm, imageUrl: base64 });
+        setUploadLoading(false);
+        console.log('Poster converted to base64 successfully');
+      };
+      reader.onerror = () => {
+        alert("Failed to read file.");
+        setUploadLoading(false);
+      };
+      return; // Early return because base64 is async
+    } finally {
+      // We don't setUploadLoading(false) here because if we fall back to base64 it's still loading
+      // Only set to false if storage succeeded or threw a non-async error
+      if (posterForm.imageUrl) {
+        setUploadLoading(false);
+      }
+    }
+  };
+
+  const handleSavePoster = async () => {
+    if (!posterForm.imageUrl) return alert("Image is required");
+    try {
+      setProcessingId('poster-save');
+      if (editingPosterId) {
+        await updateDoc(doc(db, 'posters', editingPosterId), {
+          ...posterForm,
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        await addDoc(collection(db, 'posters'), {
+          ...posterForm,
+          createdAt: serverTimestamp()
+        });
+      }
+      setShowPosterForm(false);
+      setEditingPosterId(null);
+      setPosterForm({ title: '', imageUrl: '', link: '', order: 0, isActive: true });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const editPoster = (poster: any) => {
+    setPosterForm({
+      title: poster.title || '',
+      imageUrl: poster.imageUrl || '',
+      link: poster.link || '',
+      order: poster.order || 0,
+      isActive: poster.isActive
+    });
+    setEditingPosterId(poster.id);
+    setShowPosterForm(true);
+  };
+
+  const deletePoster = async (id: string) => {
+    if (!window.confirm("Delete this poster?")) return;
+    await deleteDoc(doc(db, 'posters', id));
+  };
+
+  const togglePosterStatus = async (id: string, currentStatus: boolean) => {
+    await updateDoc(doc(db, 'posters', id), { isActive: !currentStatus });
+  };
 
   const toggleBan = async (user: any) => {
     const isTargetAdmin = isAdminEmail(user.email);
@@ -234,75 +346,116 @@ export default function AdminPanel() {
   };
 
   return (
-    <div className="space-y-6 pb-20 px-4 pt-4">
+    <div className="space-y-6 pb-24 px-6 pt-6 h-full overflow-y-auto no-scrollbar relative z-10">
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-display font-bold tracking-tight">Admin Console</h1>
+        <div className="flex items-center gap-3">
           <button 
-            onClick={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 1000); }}
-            className={cn("p-2 text-gray-400 hover:text-brand-primary transition-all rounded-lg bg-white border border-gray-100 shadow-sm", isRefreshing && "animate-spin")}
+            onClick={() => navigate(-1)} 
+            className="w-[42px] h-[42px] rounded-2xl bg-white/50 border border-white/60 flex items-center justify-center text-gray-900 shadow-sm skeuo-inner active:scale-90 transition-all shrink-0"
           >
-            <RefreshCw size={16} />
+            <ArrowLeft size={20} />
           </button>
+          <div className="flex-1 flex justify-between items-center">
+            <h1 className="text-xl font-display font-black tracking-tighter text-gray-900">Console</h1>
+            <button 
+              onClick={() => { setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 1000); }}
+              className={cn("w-[42px] h-[42px] flex items-center justify-center text-gray-400 hover:text-brand-primary transition-all rounded-2xl bg-white/50 backdrop-blur-md border border-white/60 shadow-sm skeuo-inner", isRefreshing && "animate-spin")}
+            >
+              <RefreshCw size={16} />
+            </button>
+          </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-            <div className="text-2xl font-black text-gray-900 leading-none">{stats.users}</div>
-            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
-              <Users size={12} className="text-blue-500" /> Users
+        {/* Stats Grid - Bento 2.0 */}
+        <div className="grid grid-cols-2 gap-4">
+          <motion.div 
+            whileTap={{ scale: 0.96 }}
+            className="bento-card p-5 rounded-[2rem] flex flex-col justify-between h-[120px]"
+          >
+            <div className="flex justify-between items-start">
+              <Users size={16} className="text-blue-500" />
+              <TrendingUp size={12} className="text-emerald-500" />
             </div>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" onClick={() => setActiveTab('ads')}>
-            <div className="text-2xl font-black text-orange-600 leading-none">{stats.pendingAds}</div>
-            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
-              <Megaphone size={12} className="text-orange-500" /> Pending Ads
+            <div>
+              <div className="text-2xl font-black text-gray-900 leading-none">{stats.users}</div>
+              <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1 text-xs">Total Users</div>
             </div>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" onClick={() => setActiveTab('payouts')}>
-            <div className="text-2xl font-black text-red-600 leading-none">{stats.pendingPayouts}</div>
-            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
-              <Wallet size={12} className="text-red-500" /> Payouts
+          </motion.div>
+
+          <motion.div 
+            whileTap={{ scale: 0.96 }}
+            onClick={() => setActiveTab('ads')}
+            className="bento-card p-5 rounded-[2rem] flex flex-col justify-between h-[120px]"
+          >
+            <div className="flex justify-between items-start">
+              <Megaphone size={16} className="text-orange-500" />
+              <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
             </div>
-          </div>
-          <div className="bg-slate-900 p-4 rounded-xl border border-white/5 shadow-sm">
-            <div className="text-2xl font-black text-emerald-400 leading-none">₹{stats.totalPaid.toLocaleString()}</div>
-            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
-              <TrendingUp size={12} className="text-emerald-500" /> Total Paid
+            <div>
+              <div className="text-2xl font-black text-orange-600 leading-none">{stats.pendingAds}</div>
+              <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Pending Ads</div>
             </div>
-          </div>
+          </motion.div>
+
+          <motion.div 
+            whileTap={{ scale: 0.96 }}
+            onClick={() => setActiveTab('payouts')}
+            className="bento-card p-5 rounded-[2rem] flex flex-col justify-between h-[120px]"
+          >
+            <div className="flex justify-between items-start">
+              <Wallet size={16} className="text-red-500" />
+              <Activity size={12} className="text-red-400" />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-red-600 leading-none">{stats.pendingPayouts}</div>
+              <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">Payouts</div>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            whileTap={{ scale: 0.96 }}
+            className="bento-card p-5 rounded-[2rem] bg-gray-900 flex flex-col justify-between h-[120px] shadow-2xl"
+          >
+            <div className="flex justify-between items-start">
+              <Zap size={16} className="text-emerald-400" />
+            </div>
+            <div>
+              <div className="text-xl font-black text-emerald-400 leading-none">₹{stats.totalPaid.toLocaleString()}</div>
+              <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest mt-1">Total Paid Out</div>
+            </div>
+          </motion.div>
         </div>
 
         {/* Search */}
         <div className="relative group">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 group-focus-within:text-brand-primary transition-colors" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 group-focus-within:text-brand-primary transition-colors" />
           <input 
             type="text" 
-            placeholder="Search users, campaigns..."
-            className="w-full bg-white border border-gray-200 rounded-lg px-9 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all text-xs font-medium shadow-sm"
+            placeholder="Search database..."
+            className="w-full bg-white/50 backdrop-blur-md border border-white/60 rounded-2xl px-10 h-[42px] focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary transition-all text-[12px] font-bold shadow-sm skeuo-inner hardware-accelerated"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 hide-scrollbar">
+        {/* Tabs - Pill Navigation */}
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar hardware-accelerated">
           {[
-            { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+            { id: 'overview', label: 'Home', icon: LayoutDashboard },
             { id: 'users', label: 'Users', icon: Users },
-            { id: 'ads', label: 'Approvals', icon: ShieldCheck },
+            { id: 'ads', label: 'Ads', icon: ShieldCheck },
             { id: 'payouts', label: 'Payouts', icon: Wallet },
-            { id: 'config', label: 'Config', icon: Settings },
+            { id: 'posters', label: 'Banners', icon: ImageIcon },
+            { id: 'config', label: 'Settings', icon: Settings },
           ].map(tab => (
             <button 
               key={tab.id}
               onClick={() => { setActiveTab(tab.id); setSearch(''); }}
               className={cn(
-                "px-4 py-2 rounded-lg text-[10px] font-bold whitespace-nowrap border transition-all active:scale-95 flex items-center gap-2",
+                "px-5 h-[32px] rounded-xl text-[10px] font-black whitespace-nowrap transition-all active:scale-95 uppercase tracking-widest hardware-accelerated flex items-center justify-center gap-2",
                 activeTab === tab.id 
-                  ? "bg-slate-900 text-white border-slate-900 shadow-md" 
-                  : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
+                  ? "bg-gray-900 text-white shadow-lg shadow-gray-200" 
+                  : "bg-white/50 backdrop-blur-md text-gray-400 border border-white/60"
               )}
             >
               <tab.icon size={12} />
@@ -529,6 +682,149 @@ export default function AdminPanel() {
              </div>
           )}
 
+          {activeTab === 'posters' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black uppercase tracking-tight text-gray-900">Slider Banners</h3>
+                <button 
+                  onClick={() => setShowPosterForm(!showPosterForm)}
+                  className="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-[10px] font-bold uppercase flex items-center gap-2"
+                >
+                  <Plus size={14} /> {showPosterForm ? 'Cancel' : 'Add Poster'}
+                </button>
+              </div>
+
+              <AnimatePresence>
+                {showPosterForm && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-4 overflow-hidden"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-[10px] font-black text-gray-400 uppercase mb-1 block">Banner Title</label>
+                          <input 
+                            className="w-full bg-gray-50 border border-gray-100 rounded-lg px-4 py-2 text-xs font-bold"
+                            placeholder="e.g. New Campaign Live!"
+                            value={posterForm.title}
+                            onChange={e => setPosterForm({...posterForm, title: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black text-gray-400 uppercase mb-1 block">Redirect Link (Optional)</label>
+                          <input 
+                            className="w-full bg-gray-50 border border-gray-100 rounded-lg px-4 py-2 text-xs font-bold"
+                            placeholder="/dashboard/wallet or https://..."
+                            value={posterForm.link}
+                            onChange={e => setPosterForm({...posterForm, link: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black text-gray-400 uppercase mb-1 block">Display Order</label>
+                          <input 
+                            type="number"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-lg px-4 py-2 text-xs font-bold"
+                            value={posterForm.order}
+                            onChange={e => setPosterForm({...posterForm, order: parseInt(e.target.value) || 0})}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-gray-400 uppercase mb-1 block">Banner Image</label>
+                        <div className="aspect-[16/6] bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center relative overflow-hidden">
+                          {posterForm.imageUrl ? (
+                            <>
+                              <img src={posterForm.imageUrl} className="w-full h-full object-cover" />
+                              <button 
+                                onClick={() => setPosterForm({...posterForm, imageUrl: ''})}
+                                className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full shadow-lg"
+                              >
+                                <XCircle size={14} />
+                              </button>
+                            </>
+                          ) : (
+                            <div className="text-center p-4">
+                              <ImageIcon className="mx-auto text-gray-300 mb-2" size={24} />
+                              <label className="cursor-pointer bg-white border border-gray-200 px-4 py-2 rounded-lg text-[10px] font-bold text-gray-600 shadow-sm active:scale-95 transition-all">
+                                {uploadLoading ? 'Uploading...' : 'Choose Image'}
+                                <input type="file" className="hidden" accept="image/*" onChange={handlePosterUpload} disabled={uploadLoading} />
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={handleSavePoster}
+                      disabled={!posterForm.imageUrl || uploadLoading || processingId === 'poster-save'}
+                      className="w-full bg-blue-600 text-white py-3 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
+                    >
+                      {processingId === 'poster-save' ? 'Saving...' : 'Save Banner'}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="grid grid-cols-1 gap-4">
+                {posters.map(poster => (
+                  <div key={poster.id} className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm flex gap-4">
+                    <div className="w-32 aspect-[16/9] rounded-xl bg-gray-50 border border-gray-100 overflow-hidden shrink-0">
+                      <img src={poster.imageUrl} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-[11px] font-black text-gray-900 truncate pr-2">{poster.title || 'Untitled Banner'}</h4>
+                          <div className="flex gap-1">
+                            <button 
+                              onClick={() => togglePosterStatus(poster.id, poster.isActive)}
+                              className={cn(
+                                "p-1.5 rounded-lg transition-all",
+                                poster.isActive ? "text-emerald-500 bg-emerald-50" : "text-gray-300 bg-gray-100"
+                              )}
+                            >
+                              <CheckCircle size={14} />
+                            </button>
+                            <button 
+                              onClick={() => editPoster(poster)}
+                              className="p-1.5 text-blue-500 bg-blue-50 rounded-lg"
+                            >
+                              <Settings size={14} />
+                            </button>
+                            <button 
+                              onClick={() => deletePoster(poster.id)}
+                              className="p-1.5 text-red-500 bg-red-50 rounded-lg"
+                            >
+                              <Trash size={14} />
+                            </button>
+                          </div>
+                        </div>
+                        {poster.link && (
+                          <div className="flex items-center gap-1 mt-1 text-[9px] text-blue-500 font-bold truncate">
+                            <LinkIcon size={10} /> {poster.link}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[8px] font-black uppercase bg-gray-100 text-gray-400 px-2 py-0.5 rounded-md">Order: {poster.order}</span>
+                        {poster.isActive && <span className="text-[8px] font-black uppercase bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md">Active</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {posters.length === 0 && !showPosterForm && (
+                  <div className="py-12 text-center bg-white rounded-2xl border border-dashed border-gray-200">
+                    <ImageIcon className="mx-auto text-gray-200 mb-3" size={32} />
+                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">No Banners Active</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'config' && (
             <div className="space-y-4">
               <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
@@ -539,10 +835,24 @@ export default function AdminPanel() {
                   {[
                     { key: 'homePage', label: 'Discovery Feed', icon: LayoutDashboard },
                     { key: 'wallet', label: 'Treasury & Payouts', icon: Wallet },
-                    { key: 'campaigns', label: 'Campaign Listings', icon: Megaphone },
+                    { key: 'campaigns', label: 'Post Campaign Access', icon: Megaphone },
                     { key: 'referEarn', label: 'Referral Program', icon: Users },
                     { key: 'aiPilot', label: 'Rexo AI Pilot', icon: Zap },
-                    { key: 'maintenance_mode', label: 'Maintenance Mode', icon: AlertCircle, destructive: true },
+                    { key: 'inbox', label: 'Direct Messaging', icon: Bell },
+                    { key: 'profile', label: 'User Profiles', icon: UserCog },
+                    { key: 'publicProfile', label: 'Public Portfolios', icon: Activity },
+                    { key: 'metaInsights', label: 'Meta Audience Insights', icon: Activity },
+                    { key: 'brandDashboard', label: 'Brand Admin View', icon: LayoutDashboard },
+                    { key: 'reviews', label: 'Application Reviews', icon: CheckCircle },
+                    { key: 'comments', label: 'Campaign Group Chat', icon: MessageSquare },
+                    { key: 'fileUploads', label: 'Custom File Uploads', icon: LinkIcon },
+                    { key: 'pushNotifications', label: 'Push Notifications', icon: Bell },
+                    { key: 'allow_withdrawals', label: 'Allow Withdrawals', icon: Wallet },
+                    { key: 'dark_mode', label: 'Dark Mode Support', icon: Settings },
+                    { key: 'social_login', label: 'Social Auth Logins', icon: UserCog },
+                    { key: 'analytics', label: 'App Analytics Tracking', icon: Activity },
+                    { key: 'support', label: 'Help & Support Access', icon: ShieldCheck },
+                    { key: 'maintenance_mode', label: 'System Maintenance Mode', icon: AlertCircle, destructive: true },
                   ].map((item: any) => (
                     <div key={item.key} className="flex items-center justify-between py-3 px-2 border-b border-gray-50 last:border-0">
                       <div className="flex items-center gap-3">

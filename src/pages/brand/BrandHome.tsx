@@ -20,6 +20,7 @@ import { cn } from '../../lib/utils';
 import { auth, db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { collection, query, where, getDocs, orderBy, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { useAppConfig } from '../../hooks/useAppConfig';
+import PosterSlider from '../../components/PosterSlider';
 
 export default function BrandHome() {
   const navigate = useNavigate();
@@ -105,199 +106,112 @@ export default function BrandHome() {
   }, []);
 
   return (
-    <div className="space-y-6 pb-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-display font-bold tracking-tight">Command Center</h1>
-          <p className="text-[11px] font-medium text-gray-500 mt-0.5">Scale your vision with global creator talent.</p>
-        </div>
-        <button 
-          onClick={() => navigate('/dashboard/create')}
-          className="premium-button-primary flex items-center justify-center gap-1.5 px-3.5 py-2 group"
-          id="new-campaign-button"
-        >
-          <PlusCircle className="w-3.5 h-3.5 transition-transform group-hover:rotate-90" />
-          Create Campaign
-        </button>
+    <div className="space-y-4 pb-24 px-6 pt-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-xl font-display font-black tracking-tighter text-gray-900 dark:text-white">Brand Hub</h1>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{auth.currentUser?.displayName || 'Partner'}</p>
       </div>
 
-      {/* Stats - Grid Array */}
-      {config.show_market_insights !== false && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {stats.map((stat, i) => (
-            <motion.div 
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="premium-card p-3 flex flex-col items-center text-center group"
-            >
-              <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center mb-3 transition-transform group-hover:scale-110", stat.bg)}>
-                <stat.icon className={cn("w-4 h-4", stat.color)} />
-              </div>
-              <div className="text-[22px] font-display font-bold tracking-tight mb-0.5">{stat.value}</div>
-              <div className="text-[8px] font-bold uppercase text-gray-400 tracking-widest">{stat.label}</div>
-            </motion.div>
-          ))}
-        </div>
-      )}
+      <div className="px-1">
+        <PosterSlider />
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content: Campaigns */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex justify-between items-end px-1">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400">Live Campaigns</h2>
-            <button className="text-[10px] font-bold text-brand-primary uppercase tracking-widest">Analytics Dashboard</button>
+      {/* Stats - Bento 2.0 */}
+      <div className="grid grid-cols-2 gap-4">
+        {stats.slice(0, 2).map((stat, i) => (
+          <motion.div 
+            key={i}
+            whileTap={{ scale: 0.96 }}
+            className="bento-card p-5 rounded-[2rem] flex flex-col justify-between h-[120px]"
+          >
+            <div className="flex justify-between items-start">
+              <stat.icon className={cn("w-4 h-4", stat.color)} />
+              <TrendingUp size={12} className="text-emerald-500 opacity-50" />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-gray-900 dark:text-white leading-none">{stat.value}</div>
+              <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">{stat.label}</div>
+            </div>
+          </motion.div>
+        ))}
+        <motion.div 
+          whileTap={{ scale: 0.96 }}
+          onClick={() => navigate('/dashboard/create')}
+          className="col-span-2 bento-card p-5 rounded-[2rem] bg-gray-900 flex items-center justify-between shadow-2xl relative overflow-hidden group"
+        >
+          <div className="relative z-10">
+            <h3 className="text-xl font-black text-white leading-tight">Create<br/>Campaign</h3>
+            <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mt-1">Scale your vision</p>
           </div>
-          
-          <div className="space-y-4">
-             {loading ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="premium-card h-32 animate-pulse bg-gray-50/50" />
-                ))
-            ) : campaigns.length === 0 ? (
-                <div className="premium-card py-16 text-center border-dashed border-2 flex flex-col items-center justify-center">
-                    <div className="w-16 h-16 bg-gray-50 rounded-3xl flex items-center justify-center mb-4">
-                        <Rocket className="w-8 h-8 text-gray-200" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900">No active campaigns</h3>
-                    <p className="text-gray-400 text-sm max-w-[200px] mt-1">Start your first collaboration to see performance data.</p>
-                </div>
-            ) : (
-                campaigns.map((item, i) => (
-                    <motion.div 
-                        key={item.id} 
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        onClick={() => navigate(`/dashboard/campaign/${item.id}`)}
-                        className="premium-card p-4 group hover:border-brand-primary/20 transition-all cursor-pointer"
-                    >
-                        <div className="flex justify-between items-start mb-3">
-                            <div className="flex gap-3">
-                                <div className="w-10 h-10 rounded-lg overflow-hidden shadow-inner">
-                                    <img src={item.image || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=100'} className="w-full h-full object-cover" />
-                                </div>
-                                <div>
-                                    <h3 className="font-display font-bold text-[13px] mb-0.5 group-hover:text-brand-primary transition-colors flex items-center gap-1.5">
-                                        {item.title}
-                                    </h3>
-                                    <div className="flex items-center gap-2.5 mt-1">
-                                        <div className="text-[8px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                                            <Users className="w-2.5 h-2.5" />
-                                            {item.applicationsCount || 0} Applicants
-                                        </div>
-                                        {item.cpm > 0 && (
-                                            <div className="text-[8px] text-emerald-500 font-bold uppercase tracking-widest flex items-center gap-1 border-l mx-1 pl-2 border-gray-100">
-                                                <TrendingUp className="w-2.5 h-2.5" />
-                                                CPM: ${item.cpm}
-                                            </div>
-                                        )}
-                                        {item.platform && (
-                                            <div className="text-[8px] text-indigo-500 font-bold uppercase tracking-widest flex items-center gap-1 border-l pl-2 border-gray-100">
-                                                {item.platform}
-                                            </div>
-                                        )}
-                                    </div>
-                                        <div className="text-[8px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                                            <Target className="w-2.5 h-2.5" />
-                                            {item.budget}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className={cn(
-                                        "px-1.5 py-0.5 rounded-md text-[8px] font-bold uppercase tracking-widest border",
-                                        item.status === 'pending' ? "bg-amber-50 text-amber-600 border-amber-100" :
-                                        item.status === 'active' ? "bg-green-50 text-green-600 border-green-100" :
-                                        item.status === 'rejected' ? "bg-red-50 text-red-600 border-red-100" :
-                                        "bg-gray-50 text-gray-500 border-gray-100"
-                                    )}>
-                                        {item.status || 'Active'}
-                                    </div>
-                                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteCampaign(item.id);
-                                        }}
-                                        className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                        title="Delete Campaign"
-                                    >
-                                        <Trash2 size={12} />
-                                    </button>
-                                </div>
-                        </div>
-                        <div className="h-1.5 w-full bg-gray-50 rounded-full overflow-hidden">
-                            <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: '45%' }}
-                                transition={{ duration: 1.5, ease: "easeOut" }}
-                                className="h-full bg-gradient-to-r from-brand-primary to-brand-secondary rounded-full" 
-                            />
-                        </div>
-                    </motion.div>
-                ))
-            )}
+          <div className="relative z-10 w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white backdrop-blur-md border border-white/10 group-hover:scale-110 transition-transform">
+            <PlusCircle size={24} />
           </div>
-        </div>
+          {/* Subtle background glow */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[60px] rounded-full translate-x-1/2 -translate-y-1/2" />
+        </motion.div>
+      </div>
 
-        {/* Sidebar: Talent & Quick Actions */}
-        <div className="space-y-8">
-          {/* Pending Applications Section */}
-          {pendingApps.length > 0 && (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Talent Pipeline</h3>
-                <span className="w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center text-[10px] font-black">{pendingApps.length}</span>
+      {/* Active Campaigns */}
+      <div className="space-y-4 pt-2">
+        <div className="flex justify-between items-end px-1">
+          <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Live Campaigns</h2>
+          <button onClick={() => navigate('/dashboard/admin')} className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">View All</button>
+        </div>
+        
+        <div className="space-y-4">
+           {loading ? (
+              Array.from({ length: 2 }).map((_, i) => (
+                  <div key={i} className="premium-card h-24 animate-pulse rounded-[2rem]" />
+              ))
+          ) : campaigns.length === 0 ? (
+              <div className="premium-card py-12 text-center rounded-[2rem] border-dashed flex flex-col items-center justify-center">
+                  <div className="w-12 h-12 bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center justify-center mb-4 skeuo-inner border border-gray-100 dark:border-gray-800">
+                      <Rocket className="w-6 h-6 text-gray-200 dark:text-gray-600" />
+                  </div>
+                  <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase">No active campaigns</h3>
+                  <p className="text-gray-400 dark:text-gray-500 text-[10px] uppercase font-black tracking-[0.1em] mt-1">Start your first collaboration</p>
               </div>
-              <div className="space-y-3">
-                {pendingApps.map(app => (
+          ) : (
+              campaigns.map((item, i) => (
                   <motion.div 
-                    key={app.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    onClick={() => navigate(`/dashboard/campaign/${app.campaignId}`)}
-                    className="premium-card p-4 hover:border-[#0A3D91]/20 transition-all cursor-pointer group"
+                      key={item.id} 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      onClick={() => navigate(`/dashboard/campaign/${item.id}`)}
+                      className="bento-card p-4 rounded-[2rem] group cursor-pointer"
                   >
-                    <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center font-black text-[#0A3D91] shrink-0 border border-blue-100">
-                          {(app.creatorDetails?.name || app.creatorEmail)?.[0].toUpperCase()}
-                       </div>
-                       <div className="flex-1 min-w-0">
-                          <div className="text-[11px] font-black text-gray-900 truncate">{app.creatorDetails?.name || app.creatorEmail}</div>
-                          <div className="text-[8px] font-bold text-gray-400 uppercase tracking-widest truncate">{app.title}</div>
-                       </div>
-                       <ChevronRight size={14} className="text-gray-300 group-hover:text-[#0A3D91] transition-colors" />
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                       <span className={cn(
-                         "text-[7px] font-black uppercase px-2 py-0.5 rounded-md",
-                         app.status === 'pending' ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"
-                       )}>
-                         {app.status === 'pending' ? 'Decision Pending' : 'Review Required'}
-                       </span>
-                       <span className="text-[8px] font-black text-emerald-500 uppercase">View Details</span>
-                    </div>
+                      <div className="flex justify-between items-start">
+                          <div className="flex gap-4">
+                              <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm skeuo-inner border border-white/60">
+                                  <img src={item.image || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=100'} className="w-full h-full object-cover" />
+                              </div>
+                              <div className="flex flex-col justify-center">
+                                  <h3 className="font-black text-sm text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-tight">
+                                      {item.title}
+                                  </h3>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                      <div className="text-[8px] text-gray-400 font-black uppercase tracking-widest">
+                                          {item.applicationsCount || 0} Apps
+                                      </div>
+                                      <div className="w-1 h-1 rounded-full bg-gray-200" />
+                                      <div className="text-[8px] text-emerald-500 font-black uppercase tracking-widest">
+                                          ₹{(item.reward || 0).toLocaleString()}
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                          <div className={cn(
+                              "px-2 py-0.5 rounded-lg text-[7px] font-black uppercase tracking-widest border",
+                              item.status === 'pending' ? "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/50" :
+                              item.status === 'active' ? "bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 border-green-100 dark:border-green-900/50" :
+                              "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-100 dark:border-gray-700"
+                          )}>
+                              {item.status || 'Active'}
+                          </div>
+                      </div>
                   </motion.div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {config.show_ai_pilot !== false && (
-            <section className="premium-card bg-indigo-50/50 border-indigo-100 p-6 flex flex-col items-center text-center">
-              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg border border-indigo-100 mb-6">
-                  <Search className="w-6 h-6 text-indigo-500" />
-              </div>
-              <h3 className="text-lg font-display font-bold text-indigo-900 mb-2">Smart Discovery</h3>
-              <p className="text-xs text-indigo-600/70 mb-6 font-medium leading-relaxed">Let Rexo Tool find the perfect match for your campaign DNA.</p>
-              <button 
-                onClick={() => navigate('/dashboard/ai-pilot')}
-                className="w-full premium-button-primary bg-indigo-500 shadow-indigo-200 py-3 text-xs uppercase tracking-widest font-bold"
-              >
-                Launch Rexo Tool
-              </button>
-            </section>
+              ))
           )}
         </div>
       </div>
