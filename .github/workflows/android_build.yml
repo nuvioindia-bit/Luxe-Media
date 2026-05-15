@@ -30,16 +30,13 @@ jobs:
       - name: Capacitor Sync
         run: npx cap sync android
 
-      # Yeh step saare corrupt Icons aur Splash Screens dono ko ek saath automatic patch kar dega
-      - name: Auto-Fix All Corrupt Assets (Icons & Splash Screens)
+      # Installer crash se bachne ke liye standard size ka safe placeholder image generator
+      - name: Auto-Fix Corrupt Assets with Safe Images
         run: |
-          echo "Patching launcher icons..."
-          find android/app/src/main/res/ -name "ic_launcher*.png" -exec sh -c 'echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" | base64 -d > "{}"' \;
-          
-          echo "Patching splash screens..."
-          find android/app/src/main/res/ -name "splash*.png" -exec sh -c 'echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" | base64 -d > "{}"' \;
-          
-          echo "All asset compilation bottlenecks bypassed successfully!"
+          echo "Generating safe standard assets..."
+          find android/app/src/main/res/ -name "ic_launcher*.png" -exec sh -c 'echo "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXUpAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfmBRUXFwAAAAAAAAGKSURBVGje7Z2xCsJAEEU3u8bGv9b/v8InWApWVmInbCIptBC00JuZ8gYWhv0m7G6S8p6ae2reU3NPzb3/O8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCqwN66As8A6v8W6MtcAecgU3+XfAAnIF7bE7AIn+U9wRsgXvs6YAnYAtscKID7oAtcI9NDjgDtsA9NifwAtwDe+z5A9wBe+DInm/AHbAHjuwFBlYg8P4P7IUlK7AQWInA6w6sWIGVwEoEXm9gxQqsBFYi8DoDK1ZgJbASgdcZWLECK4GVCBy/Y8EKLARWIvC6AytWYCWwEoHXG1ixAiuBlQi8zsCKFVgJrETgdQZWrMBKYCUCx89YsAILgZUIvO7AihVYCaxE4PUGVqzASmAlAq8zsGIFVgIrEXidgRUrsBJYicDxMxaswEJgJQLvO7BiBVYCKxF4vYEVK7ASWInA6wysWIGVwEoEXmdgxQqsBFYicPyMBSuwEFiJwOsOrFiBlcBKBF5vYMUKeAFgZ6b0PrRAtwAAAABJRU5ErkJggg==" | base64 -d > "{}"' \;
+          find android/app/src/main/res/ -name "splash*.png" -exec sh -c 'echo "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXUpAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfmBRUXFwAAAAAAAAGKSURBVGje7Z2xCsJAEEU3u8bGv9b/v8InWApWVmInbCIptBC00JuZ8gYWhv0m7G6S8p6ae2reU3NPzb3/O8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCqwN66As8A6v8W6MtcAecgU3+XfAAnIF7bE7AIn+U9wRsgXvs6YAnYAtscKID7oAtcI9NDjgDtsA9NifwAtwDe+z5A9wBe+DInm/AHbAHjuwFBlYg8P4P7IUlK7AQWInA6w6sWIGVwEoEXm9gxQqsBFYi8DoDK1ZgJbASgdcZWLECK4GVCBy/Y8EKLARWIvC6AytWYCWwEoHXG1ixAiuBlQi8zsCKFVgJrETgdQZWrMBKYCUCx89YsAILgZUIvO7AihVYCaxE4PUGVqzASmAlAq8zsGIFVgIrEXidgRUrsBJYicDxMxaswEJgJQLvO7BiBVYCKxF4vYEVK7ASWInA6wysWIGVwEoEXmdgxQqsBFYicPyMBSuwEFiJwOsOrFiBlcBKBF5vYMUKeAFgZ6b0PrRAtwAAAABJRU5ErkJggg==" | base64 -d > "{}"' \;
+          echo "Safe placeholders injected successfully."
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -52,14 +49,16 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Build APK via Global Gradle (No Wrapper Crash)
+      # Hamein Testing ke liye Debug APK chahiye jo auto-signed hota hai
+      - name: Build APK via Global Gradle (Debug Version)
         run: |
           cd android
-          gradle assembleRelease
+          gradle assembleDebug
           
+      # Artifact path ko badal kar Debug APK par set kar diya hai
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           
