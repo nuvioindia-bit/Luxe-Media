@@ -44,8 +44,10 @@ jobs:
             fi
           done
 
-          - name: Build Web App
-            run: npm run build
+      - name: Build Web App
+        run: |
+          export GENERATE_SOURCEMAP=false
+          npm run build
 
       - name: Capacitor Sync
         run: npx cap sync android
@@ -106,7 +108,7 @@ jobs:
           convert "$SRC_ICON" -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
           convert "$SRC_ICON" -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
 
-          # Generate Splash Screens (Bypasses the exact failing folders)
+          # Generate Splash Screens
           mkdir -p android/app/src/main/res/drawable
           mkdir -p android/app/src/main/res/drawable-land-mdpi
           mkdir -p android/app/src/main/res/drawable-port-mdpi
