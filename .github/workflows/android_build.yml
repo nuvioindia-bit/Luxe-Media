@@ -53,47 +53,48 @@ jobs:
         run: npx cap sync android
 
       # =================================================================
-      # DIRECT NATIVE ICON GENERATOR (BYPASS BUGGY THIRD-PARTY TOOLS)
+      # CASE-INSENSITIVE NATIVE ICON GENERATOR (FIXED FOR CAPITAL OR LOWERCASE)
       # =================================================================
       - name: Generate Clean Production Icons from Real Icon
         run: |
           echo "Wiping any old or corrupt launcher resources from android folder..."
           find android/app/src/main/res/ -name "ic_launcher*.png" -delete || true
           
-          if [ -f assets/icon.png ]; then
-            echo "Processing real assets/icon.png using pre-installed system ImageMagick..."
+          # Case-insensitive tareeke se file dhoondh rahe hain (chahe Icon.png ho ya icon.png)
+          SRC_ICON=$(find assets/ -iname "icon.png" | head -n 1)
+          
+          if [ -n "$SRC_ICON" ] && [ -f "$SRC_ICON" ]; then
+            echo "Found valid source icon at: $SRC_ICON. Processing..."
             
-            # Target mipmap directories secure kar rahe hain
             mkdir -p android/app/src/main/res/mipmap-mdpi
             mkdir -p android/app/src/main/res/mipmap-hdpi
             mkdir -p android/app/src/main/res/mipmap-xhdpi
             mkdir -p android/app/src/main/res/mipmap-xxhdpi
             mkdir -p android/app/src/main/res/mipmap-xxxhdpi
             
-            # Strict Android standard sizes generator (No extra metadata or bad color profiles)
-            convert assets/icon.png -resize 48x48! android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-            convert assets/icon.png -resize 48x48! android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
-            convert assets/icon.png -resize 48x48! android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+            convert "$SRC_ICON" -resize 48x48! android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+            convert "$SRC_ICON" -resize 48x48! android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
+            convert "$SRC_ICON" -resize 48x48! android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
             
-            convert assets/icon.png -resize 72x72! android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-            convert assets/icon.png -resize 72x72! android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png
-            convert assets/icon.png -resize 72x72! android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+            convert "$SRC_ICON" -resize 72x72! android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+            convert "$SRC_ICON" -resize 72x72! android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png
+            convert "$SRC_ICON" -resize 72x72! android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
             
-            convert assets/icon.png -resize 96x96! android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-            convert assets/icon.png -resize 96x96! android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png
-            convert assets/icon.png -resize 96x96! android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+            convert "$SRC_ICON" -resize 96x96! android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+            convert "$SRC_ICON" -resize 96x96! android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png
+            convert "$SRC_ICON" -resize 96x96! android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
             
-            convert assets/icon.png -resize 144x144! android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-            convert assets/icon.png -resize 144x144! android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png
-            convert assets/icon.png -resize 144x144! android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+            convert "$SRC_ICON" -resize 144x144! android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+            convert "$SRC_ICON" -resize 144x144! android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png
+            convert "$SRC_ICON" -resize 144x144! android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
             
-            convert assets/icon.png -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-            convert assets/icon.png -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
-            convert assets/icon.png -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+            convert "$SRC_ICON" -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+            convert "$SRC_ICON" -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
+            convert "$SRC_ICON" -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
             
             echo "Real brand icons generated with perfect production standards successfully!"
           else
-            echo "ERROR: assets/icon.png not found!"
+            echo "ERROR: No icon file found in assets folder with any casing!"
             exit 1
           fi
 
