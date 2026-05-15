@@ -25,9 +25,9 @@ jobs:
         run: npm install
 
       # =======================================================
-      # HIGH-PERFORMANCE NATIVE LAYOUT LOCK (NO LAG / NO BOUNCE)
+      # STRICT NATIVE LAYOUT LOCK (YOUR PERFECT WORKING LAYOUT)
       # =======================================================
-      - name: Automated Mobile View & GPU Optimized Layout
+      - name: Automated Mobile View & Native Layout Lock
         run: |
           echo "Injecting viewport-fit=cover into HTML..."
           if [ -f index.html ]; then
@@ -37,48 +37,53 @@ jobs:
             sed -i 's/<meta name="viewport" content="[^"]*"/<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/g' public/index.html
           fi
 
-          echo "Enforcing smooth hardware-accelerated CSS containment..."
+          echo "Enforcing strict screen containment and fixing clipped bottom navigation bar..."
           for css_file in src/index.css src/App.css src/main.css; do
             if [ -f "$css_file" ]; then
-              echo -e "\n/* High-Performance Native Lock */\nhtml, body {\n  margin: 0 !important;\n  padding: 0 !important;\n  width: 100% !important;\n  height: 100dvh !important;\n  overflow: hidden !important;\n  position: fixed !important;\n  contain: strict !important;\n}\n#root {\n  width: 100% !important;\n  height: 100dvh !important;\n  max-width: 480px !important;\n  margin: 0 auto !important;\n  position: relative !important;\n  display: flex !important;\n  flex-direction: column !important;\n  overflow: hidden !important;\n  padding-top: env(safe-area-inset-top, 24px) !important;\n  padding-bottom: env(safe-area-inset-bottom, 12px) !important;\n  will-change: transform !important;\n}" >> "$css_file"
+              echo -e "\n/* Strict Native App Fit & Bottom Bar Fix */\n* {\n  box-sizing: border-box !important;\n}\nhtml, body {\n  margin: 0 !important;\n  padding: 0 !important;\n  width: 100% !important;\n  height: 100dvh !important;\n  overflow: hidden !important;\n  position: fixed !important;\n}\n#root {\n  width: 100% !important;\n  height: 100dvh !important;\n  max-width: 480px !important;\n  margin: 0 auto !important;\n  position: relative !important;\n}\n#root > * {\n  height: 100% !important;\n  display: flex !important;\n  flex-direction: column !important;\n  overflow: hidden !important;\n  padding-top: env(safe-area-inset-top, 24px) !important;\n  padding-bottom: env(safe-area-inset-bottom, 12px) !important;\n}" >> "$css_file"
             fi
           done
 
-      - name: Build Web App (Production Mode)
-        run: |
-          export GENERATE_SOURCEMAP=false
-          npm run build
+          - name: Build Web App
+            run: npm run build
 
       - name: Capacitor Sync
         run: npx cap sync android
 
       # =======================================================
-      # SYSTEM ENGINE INSTALLATION (FIXES CONVERT COMMAND ERROR)
+      # SYSTEM ENGINE INSTALLATION (FOR COMPILING IMAGE ASSETS)
       # =======================================================
       - name: Install ImageMagick Environment
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick
 
-      # =================================================================
-      # SMART ICON GENERATOR WITH AUTOMATIC FALLBACK (NEVER FAILS)
-      # =================================================================
-      - name: Generate Clean Production Icons (With Fallback)
+      # =======================================================
+      # UNBREAKABLE ASSET GENERATOR (FIXES ICONS & SPLASH SCREENS)
+      # =======================================================
+      - name: Generate Clean Production Icons & Splash Screens
         run: |
-          echo "Wiping old launcher resources..."
+          echo "Wiping old launcher and splash resources to clear corruption..."
           find android/app/src/main/res/ -name "ic_launcher*.png" -delete || true
+          find android/app/src/main/res/ -name "splash*.png" -delete || true
           
-          echo "Searching for icon.png globally across the project..."
+          echo "Searching for icon/logo globally..."
           SRC_ICON=$(find . -type f \( -iname "icon.png" -o -iname "logo.png" \) -not -path "*/node_modules/*" -not -path "*/android/*" | head -n 1)
           
-          if [ -n "$SRC_ICON" ] && [ -f "$SRC_ICON" ]; then
-            echo "Awesome! Real icon located at: $SRC_ICON"
-          else
-            echo "Real icon not found in repository paths. Creating a safe standard asset on the fly to guarantee build success..."
-            convert -size 1024x1024 xc:#3b82f6 assets_fallback_icon.png || convert -size 1024x1024 xc:blue assets_fallback_icon.png
+          if [ -z "$SRC_ICON" ] || [ ! -f "$SRC_ICON" ]; then
+            echo "No custom icon found, generating a safe default..."
+            convert -size 1024x1024 xc:#3b82f6 assets_fallback_icon.png
             SRC_ICON="assets_fallback_icon.png"
           fi
           
+          echo "Searching for splash screen globally..."
+          SRC_SPLASH=$(find . -type f \( -iname "splash.png" \) -not -path "*/node_modules/*" -not -path "*/android/*" | head -n 1)
+          if [ -z "$SRC_SPLASH" ] || [ ! -f "$SRC_SPLASH" ]; then
+            echo "No custom splash found, matching with icon background..."
+            SRC_SPLASH="$SRC_ICON"
+          fi
+
+          # Generate Icons
           mkdir -p android/app/src/main/res/mipmap-mdpi
           mkdir -p android/app/src/main/res/mipmap-hdpi
           mkdir -p android/app/src/main/res/mipmap-xhdpi
@@ -88,25 +93,42 @@ jobs:
           convert "$SRC_ICON" -resize 48x48! android/app/src/main/res/mipmap-mdpi/ic_launcher.png
           convert "$SRC_ICON" -resize 48x48! android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
           convert "$SRC_ICON" -resize 48x48! android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-          
           convert "$SRC_ICON" -resize 72x72! android/app/src/main/res/mipmap-hdpi/ic_launcher.png
           convert "$SRC_ICON" -resize 72x72! android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png
           convert "$SRC_ICON" -resize 72x72! android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-          
           convert "$SRC_ICON" -resize 96x96! android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
           convert "$SRC_ICON" -resize 96x96! android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png
           convert "$SRC_ICON" -resize 96x96! android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-          
           convert "$SRC_ICON" -resize 144x144! android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
           convert "$SRC_ICON" -resize 144x144! android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png
           convert "$SRC_ICON" -resize 144x144! android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-          
           convert "$SRC_ICON" -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           convert "$SRC_ICON" -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
           convert "$SRC_ICON" -resize 192x192! android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+
+          # Generate Splash Screens (Bypasses the exact failing folders)
+          mkdir -p android/app/src/main/res/drawable
+          mkdir -p android/app/src/main/res/drawable-land-mdpi
+          mkdir -p android/app/src/main/res/drawable-port-mdpi
+          mkdir -p android/app/src/main/res/drawable-land-hdpi
+          mkdir -p android/app/src/main/res/drawable-port-hdpi
+          mkdir -p android/app/src/main/res/drawable-land-xhdpi
+          mkdir -p android/app/src/main/res/drawable-port-xhdpi
+          mkdir -p android/app/src/main/res/drawable-land-xxhdpi
+          mkdir -p android/app/src/main/res/drawable-port-xxhdpi
+
+          convert "$SRC_SPLASH" -resize 512x512! android/app/src/main/res/drawable/splash.png
+          convert "$SRC_SPLASH" -resize 480x320! android/app/src/main/res/drawable-land-mdpi/splash.png
+          convert "$SRC_SPLASH" -resize 320x480! android/app/src/main/res/drawable-port-mdpi/splash.png
+          convert "$SRC_SPLASH" -resize 800x480! android/app/src/main/res/drawable-land-hdpi/splash.png
+          convert "$SRC_SPLASH" -resize 480x800! android/app/src/main/res/drawable-port-hdpi/splash.png
+          convert "$SRC_SPLASH" -resize 1280x720! android/app/src/main/res/drawable-land-xhdpi/splash.png
+          convert "$SRC_SPLASH" -resize 720x1280! android/app/src/main/res/drawable-port-xhdpi/splash.png
+          convert "$SRC_SPLASH" -resize 1600x960! android/app/src/main/res/drawable-land-xxhdpi/splash.png
+          convert "$SRC_SPLASH" -resize 960x1600! android/app/src/main/res/drawable-port-xxhdpi/splash.png
           
           rm -f assets_fallback_icon.png
-          echo "Icon processing step completed safely!"
+          echo "All icons and splash assets fully compiled with strict production standards!"
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -119,7 +141,7 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      # Final Release APK Build Step
+      # Direct Global Gradle se Release APK build
       - name: Build APK (Release)
         run: |
           cd android
