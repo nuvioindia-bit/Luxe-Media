@@ -39,15 +39,13 @@ jobs:
       - name: Grant Execute Permission for Gradlew
         run: chmod +x android/gradlew
 
-      - name: Regenerate Gradle Wrapper
-        run: |
-          cd android
-          ./gradlew wrapper --gradle-version 8.14.3
+      - name: Remove Corrupt Gradle Wrapper
+        run: rm -rf android/gradlew android/gradlew.bat android/gradle/wrapper/gradle-wrapper.jar android/gradle/wrapper/gradle-wrapper.properties
 
       - name: Build APK (Release)
         run: |
           cd android
-          ./gradlew assembleRelease
+          gradle assembleRelease
           
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
