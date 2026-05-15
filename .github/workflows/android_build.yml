@@ -25,9 +25,9 @@ jobs:
         run: npm install
 
       # =======================================================
-      # STRICT NATIVE LAYOUT LOCK (FIXES HEADER & BOTTOM BAR)
+      # HIGH-PERFORMANCE NATIVE LAYOUT LOCK (NO LAG / NO BOUNCE)
       # =======================================================
-      - name: Automated Mobile View & Native Layout Lock
+      - name: Automated Mobile View & GPU Optimized Layout
         run: |
           echo "Injecting viewport-fit=cover into HTML..."
           if [ -f index.html ]; then
@@ -37,15 +37,18 @@ jobs:
             sed -i 's/<meta name="viewport" content="[^"]*"/<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/g' public/index.html
           fi
 
-          echo "Enforcing strict screen containment and fixing clipped bottom navigation bar..."
+          echo "Enforcing smooth hardware-accelerated CSS containment..."
           for css_file in src/index.css src/App.css src/main.css; do
             if [ -f "$css_file" ]; then
-              echo -e "\n/* Strict Native App Fit & Bottom Bar Fix */\n* {\n  box-sizing: border-box !important;\n}\nhtml, body {\n  margin: 0 !important;\n  padding: 0 !important;\n  width: 100% !important;\n  height: 100dvh !important;\n  overflow: hidden !important;\n  position: fixed !important;\n}\n#root {\n  width: 100% !important;\n  height: 100dvh !important;\n  max-width: 480px !important;\n  margin: 0 auto !important;\n  position: relative !important;\n}\n#root > * {\n  height: 100% !important;\n  display: flex !important;\n  flex-direction: column !important;\n  overflow: hidden !important;\n  padding-top: env(safe-area-inset-top, 24px) !important;\n  padding-bottom: env(safe-area-inset-bottom, 12px) !important;\n}" >> "$css_file"
+              echo -e "\n/* High-Performance Native Lock */\nhtml, body {\n  margin: 0 !important;\n  padding: 0 !important;\n  width: 100% !important;\n  height: 100dvh !important;\n  overflow: hidden !important;\n  position: fixed !important;\n  contain: strict !important;\n}\n#root {\n  width: 100% !important;\n  height: 100dvh !important;\n  max-width: 480px !important;\n  margin: 0 auto !important;\n  position: relative !important;\n  display: flex !important;\n  flex-direction: column !important;\n  overflow: hidden !important;\n  padding-top: env(safe-area-inset-top, 24px) !important;\n  padding-bottom: env(safe-area-inset-bottom, 12px) !important;\n  will-change: transform !important;\n}" >> "$css_file"
             fi
           done
 
-      - name: Build Web App
-        run: npm run build
+      - name: Build Web App (Production Mode)
+        run: |
+          # Source maps ko disable kar rahe hain taaki main bundle size chota aur fast ho jaye
+          export GENERATE_SOURCEMAP=false
+          npm run build
 
       - name: Capacitor Sync
         run: npx cap sync android
@@ -69,7 +72,7 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      # Direct Global Gradle se Release APK build
+      # Direct Global Gradle se Optimized Release APK build
       - name: Build APK (Release)
         run: |
           cd android
