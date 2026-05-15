@@ -24,9 +24,9 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      # ==========================================
-      # STRICT NATIVE LAYOUT LOCK (FIXES BOUNCY SCROLL)
-      # ==========================================
+      # =======================================================
+      # STRICT NATIVE LAYOUT LOCK (FIXES HEADER & BOTTOM BAR)
+      # =======================================================
       - name: Automated Mobile View & Native Layout Lock
         run: |
           echo "Injecting viewport-fit=cover into HTML..."
@@ -37,10 +37,10 @@ jobs:
             sed -i 's/<meta name="viewport" content="[^"]*"/<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/g' public/index.html
           fi
 
-          echo "Enforcing strict screen containment and status bar margins via CSS..."
+          echo "Enforcing strict screen containment and fixing clipped bottom navigation bar..."
           for css_file in src/index.css src/App.css src/main.css; do
             if [ -f "$css_file" ]; then
-              echo -e "\n/* Strict Native App Fit */\nhtml, body, #root {\n  position: fixed !important;\n  top: 0 !important;\n  left: 0 !important;\n  width: 100% !important;\n  height: 100dvh !important;\n  overflow: hidden !important;\n  padding-top: env(safe-area-inset-top, 24px) !important;\n  padding-bottom: env(safe-area-inset-bottom, 16px) !important;\n  max-width: 480px !important;\n  margin: 0 auto !important;\n}" >> "$css_file"
+              echo -e "\n/* Strict Native App Fit & Bottom Bar Fix */\n* {\n  box-sizing: border-box !important;\n}\nhtml, body {\n  margin: 0 !important;\n  padding: 0 !important;\n  width: 100% !important;\n  height: 100dvh !important;\n  overflow: hidden !important;\n  position: fixed !important;\n}\n#root {\n  width: 100% !important;\n  height: 100dvh !important;\n  max-width: 480px !important;\n  margin: 0 auto !important;\n  position: relative !important;\n}\n#root > * {\n  height: 100% !important;\n  display: flex !important;\n  flex-direction: column !important;\n  overflow: hidden !important;\n  padding-top: env(safe-area-inset-top, 24px) !important;\n  padding-bottom: env(safe-area-inset-bottom, 12px) !important;\n}" >> "$css_file"
             fi
           done
 
@@ -50,15 +50,12 @@ jobs:
       - name: Capacitor Sync
         run: npx cap sync android
 
-      # ==========================================
-      # AUTOMATED CLOUD ICON GENERATOR (FIXED COMMAND)
-      # ==========================================
+      # Automated Cloud Asset Generator
       - name: Generate Real Android Icons on Cloud
         run: |
           echo "Installing Capacitor Assets Tool..."
           npm install @capacitor/assets --save-dev
           echo "Generating responsive Android icons..."
-          # Command ka naam fixed aur flag hata diya hai taaki crash na ho
           npx capacitor-assets generate
 
       - name: Setup Java
@@ -72,7 +69,7 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      # Direct Global Gradle se Real Icon ke sath Release APK build
+      # Direct Global Gradle se Release APK build
       - name: Build APK (Release)
         run: |
           cd android
