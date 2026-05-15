@@ -180,7 +180,7 @@ export default function DashboardLayout({ user, role }: Props) {
   const hideHeader = isFullScreenPage;
 
   return (
-    <div className="h-screen flex flex-col font-sans overflow-hidden">
+    <div className="h-full flex flex-col font-sans overflow-hidden">
       {/* Top Header - Glass Effect */}
       {!hideHeader && (
         <header className="shrink-0 z-40 bg-white/40 dark:bg-gray-950/40 backdrop-blur-3xl border-b border-white/60 dark:border-gray-800/60 px-6 py-4 flex justify-between items-center shadow-[0_2px_20px_rgb(0,0,0,0.02)]">
@@ -300,13 +300,9 @@ export default function DashboardLayout({ user, role }: Props) {
 
       {/* Main Content Area */}
       <main className={cn(
-        "flex-1 overflow-x-hidden w-full max-w-2xl mx-auto relative",
-        hideHeader ? "overflow-hidden" : "overflow-y-auto"
+        "flex-1 w-full max-w-2xl mx-auto relative overflow-y-auto"
       )}>
-        <div className={cn(
-          "h-full",
-          !hideHeader && "p-0"
-        )}>
+        <div className="h-full">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -324,7 +320,7 @@ export default function DashboardLayout({ user, role }: Props) {
 
       {/* Bottom Navigation - Elite Flat Bottom Design */}
       {!isFullScreenPage && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-gray-950/90 backdrop-blur-3xl border-t border-gray-100 dark:border-gray-900 shadow-[0_-5px_30px_rgba(0,0,0,0.05)] pb-safe">
+        <div className="shrink-0 z-50 bg-white/90 dark:bg-gray-950/90 backdrop-blur-3xl border-t border-gray-100 dark:border-gray-900 shadow-[0_-5px_30px_rgba(0,0,0,0.05)] pb-safe">
           <div className="max-w-full mx-auto">
             <nav className="flex items-center justify-between h-[60px] px-6">
               {navItems.map((item) => {

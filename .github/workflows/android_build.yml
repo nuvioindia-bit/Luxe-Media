@@ -24,59 +24,31 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      # ==========================================
-      # AUTOMATED MOBILE VIEW & STATUS BAR FIX STEP
-      # ==========================================
-      - name: Automated Mobile View & Layout Fixer
-        run: |
-          echo "Injecting viewport-fit=cover into HTML files..."
-          if [ -f index.html ]; then
-            sed -i 's/<meta name="viewport" content="[^"]*"/<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/g' index.html
-          fi
-          if [ -f public/index.html ]; then
-            sed -i 's/<meta name="viewport" content="[^"]*"/<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/g' public/index.html
-          fi
-
-          echo "Injecting Safe-Area Padding & Max-Width Fluid Layout into CSS..."
-          for css_file in src/index.css src/App.css src/main.css; do
-            if [ -f "$css_file" ]; then
-              echo -e "\n/* Automated Mobile View Fix */\nhtml, body, #root {\n  padding-top: env(safe-area-inset-top, 24px) !important;\n  padding-bottom: env(safe-area-inset-bottom, 16px) !important;\n  max-width: 480px !important;\n  margin-left: auto !important;\n  margin-right: auto !important;\n  min-height: 100dvh !important;\n}" >> "$css_file"
-            fi
-          done
-          echo "Global responsiveness injection complete!"
-
       - name: Build Web App
         run: npm run build
 
       - name: Capacitor Sync
         run: npx cap sync android
 
-      # AAPT2 compiler crash se bachne ke liye safe asset generator
-      - name: Auto-Fix Corrupt Assets (Icons & Splash Screens)
-        run: |
-          find android/app/src/main/res/ -name "ic_launcher*.png" -exec sh -c 'echo "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXUpAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfmBRUXFwAAAAAAAAGKSURBVGje7Z2xCsJAEEU3u8bGv9b/v8InWApWVmInbCIptBC00JuZ8gYWhv0m7G6S8p6ae2reU3NPzb3/O8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCqwN66As8A6v8W6MtcAecgU3+XfAAnIF7bE7AIn+U9wRsgXvs6YAnYAtscKID7oAtcI9NDjgDtsA9NifwAtwDe+z5A9wBe+DInm/AHbAHjuwFBlYg8P4P7IUlK7AQWInA6w6sWIGVwEoEXm9gxQqsBFYi8DoDK1ZgJbASgdcZWLECK4GVCBy/Y8EKLARWIvC6AytWYCWwEoHXG1ixAiuBlQi8zsCKFVgJrETgdQZWrMBKYCUCx89YsAILgZUIvO7AihVYCaxE4PUGVqzASmAlAq8zsGIFVgIrEXidgRUrsBJYicDxMxaswEJgJQLvO7BiBVYCKxF4vYEVK7ASWInA6wysWIGVwEoEXmdgxQqsBFYicPyMBSuwEFiJwOsOrFiBlcBKBF5vYMUKeAFgZ6b0PrRAtwAAAABJRU5ErkJggg==" | base64 -d > "{}"' \;
-          find android/app/src/main/res/ -name "splash*.png" -exec sh -c 'echo "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXUpAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfmBRUXFwAAAAAAAAGKSURBVGje7Z2xCsJAEEU3u8bGv9b/v8InWApWVmInbCIptBC00JuZ8gYWhv0m7G6S8p6ae2reU3NPzb3/O8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCqwN66As8A6v8W6MtcAecgU3+XfAAnIF7bE7AIn+U9wRsgXvs6YAnYAtscKID7oAtcI9NDjgDtsA9NifwAtwDe+z5A9wBe+DInm/AHbAHjuwFBlYg8P4P7IUlK7AQWInA6w6sWIGVwEoEXm9gxQqsBFYi8DoDK1ZgJbASgdcZWLECK4GVCBy/Y8EKLARWIvC6AytWYCWwEoHXG1ixAiuBlQi8zsCKFVgJrETgdQZWrMBKYCUCx89YsAILgZUIvO7AihVYCaxE4PUGVqzASmAlAq8zsGIFVgIrEXidgRUrsBJYicDxMxaswEJgJQLvO7BiBVYCKxF4vYEVK7ASWInA6wysWIGVwEoEXmdgxQqsBFYicPyMBSuwEFiJwOsOrFiBlcBKBF5vYMUKeAFgZ6b0PrRAtwAAAABJRU5ErkJggg==" | base64 -d > "{}"' \;
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
+          
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x android/gradlew
 
-      - name: Setup Gradle System (Bypass Wrapper)
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.13'
-
-      # Testing ke liye Debug APK jo bina security crash ke install hoga
-      - name: Build APK via Global Gradle (Debug Version)
+      - name: Build APK (Release)
         run: |
           cd android
-          gradle assembleDebug
+          # Ensure wrapper files exist and are executable
+          chmod +x gradlew
+          # The wrapper will download the distribution defined in gradle-wrapper.properties
+          ./gradlew assembleRelease
           
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          
+          name: app-release
+          path: android/app/build/outputs/apk/release/
