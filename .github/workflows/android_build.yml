@@ -42,9 +42,6 @@ jobs:
       - name: Build APK (Release)
         run: |
           cd android
-          rm -rf gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties gradlew gradlew.bat
-          gradle wrapper --gradle-version 8.14.3
-          chmod +x gradlew
           ./gradlew assembleRelease
           
       - name: Upload APK Artifact
