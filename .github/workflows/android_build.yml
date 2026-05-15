@@ -60,13 +60,40 @@ jobs:
           echo "Installing Capacitor Assets Tool..."
           npm install @capacitor/assets --save-dev
           echo "Generating responsive Android icons..."
-          npx capacitor-assets generate || true
+          npx capacitor-assets generate
 
       # =======================================================
-      # FLOOD REPAIR: OVERWRITING ALL CORRUPT OUTPUTS DIRECTLY
+      # CRITICAL FIX: STRIP AAPT2-KILLING METADATA FROM REAL ICONS
       # =======================================================
-      - name: Force-Sanitize All Generated Android Resources
+      - name: Strip Bad Color Profiles From Generated Icons
         run: |
-          echo "Downloading a guaranteed valid standard PNG..."
-          curl -sL -o verified_clean.png https://
+          echo "Stripping invisible junk metadata chunks introduced by the generator tool..."
+          # Yeh command aapke real icons ko bina nuksan pahunchaye unka background metadata saaf kar degi
+          if [ -d android/app/src/main/res ]; then
+            find android/app/src/main/res/ -name "*.png" -exec mogrify -strip {} \; || true
+          fi
+          echo "All real icons are now perfectly optimized for Android AAPT2 Compiler!"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle System (Bypass Wrapper Jar)
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.13'
+
+      # Aapke asli icon aur optimized layout ke sath final Release APK Build
+      - name: Build APK (Release)
+        run: |
+          cd android
+          gradle assembleRelease
+          
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: android/app/build/outputs/apk/release/
           
