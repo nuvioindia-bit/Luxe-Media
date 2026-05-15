@@ -325,7 +325,7 @@ export default function DashboardLayout({ user, role }: Props) {
       {/* Bottom Navigation - Elite Flat Bottom Design */}
       {!isFullScreenPage && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-gray-950/90 backdrop-blur-3xl border-t border-gray-100 dark:border-gray-900 shadow-[0_-5px_30px_rgba(0,0,0,0.05)] pb-safe">
-          <div className="max-w-md mx-auto">
+          <div className="max-w-full mx-auto">
             <nav className="flex items-center justify-between h-[60px] px-6">
               {navItems.map((item) => {
                 const isHome = item.path === '/dashboard' && location.pathname === '/dashboard';

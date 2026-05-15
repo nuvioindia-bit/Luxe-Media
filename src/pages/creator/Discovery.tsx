@@ -83,7 +83,7 @@ export default function Discovery() {
           <input 
             type="text" 
             placeholder="Search campaigns..."
-            className="w-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-md border border-white/60 dark:border-gray-700/60 rounded-2xl px-10 h-[42px] focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary transition-all text-[12px] font-bold shadow-sm skeuo-inner text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 hardware-accelerated"
+            className="w-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-md border border-white/60 dark:border-gray-700/60 rounded-2xl px-10 h-[42px] focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary transition-all text-[16px] font-bold shadow-sm skeuo-inner text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 hardware-accelerated"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
