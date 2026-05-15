@@ -36,34 +36,18 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Force Heavy Gradle Wrapper Reset
+      # Yeh step GitHub ke machine par global Gradle engine install karega 
+      # Taaki hume us corrupt gradle-wrapper.jar ki zaroorat hi na pade!
+      - name: Setup Gradle System (Bypass Wrapper)
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.7
+
+      - name: Build APK via Global Gradle (No Wrapper Crash)
         run: |
           cd android
-          # Pura wrapper folder hi saaf kar dete hain taaki koi purani kharab file bache hi na
-          rm -rf gradle/wrapper
-          mkdir -p gradle/wrapper
-          
-          # Fresh verified wrapper jar download kar rahe hain
-          curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.7/gradle/wrapper/gradle-wrapper.jar
-          
-          # Agar properties file kharab ho toh usko bhi default standard code se overwrite kar dete hain
-          echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
-          echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
-          echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
-          echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-          
-          echo "Gradle wrapper fully reset and forced to v8.7"
-
-      - name: Grant Execute Permission for Gradlew
-        run: chmod +x android/gradlew
-
-      - name: Build APK (Release)
-        run: |
-          cd android
-          chmod +x gradlew
-          # Is baar bina kisi cache issue ke fresh wrapper chalega
-          ./gradlew assembleRelease
+          # `./gradlew` (wrapper) ko use karne ke bajaye hum direct `gradle` system command chalayenge
+          gradle assembleRelease
           
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
