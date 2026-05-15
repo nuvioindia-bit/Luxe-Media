@@ -52,6 +52,19 @@ jobs:
       - name: Capacitor Sync
         run: npx cap sync android
 
+      # =======================================================
+      # AUTOMATIC IMAGE REPAIR & SANITIZATION (CRITICAL FIX)
+      # =======================================================
+      - name: Sanitize and Repair Source Icon Headers
+        run: |
+          if [ -f assets/icon.png ]; then
+            echo "ImageMagick ka use karke kharab image headers ko repair kar rahe hain..."
+            convert assets/icon.png -resize 1024x1024! -background none -alpha on assets/icon.png
+            echo "Source icon successfully repaired into a standard valid PNG format!"
+          else
+            echo "Warning: assets/icon.png nahi mila!"
+          fi
+
       # ==========================================
       # AUTOMATED CLOUD ICON GENERATOR
       # ==========================================
@@ -59,7 +72,7 @@ jobs:
         run: |
           echo "Installing Capacitor Assets Tool..."
           npm install @capacitor/assets --save-dev
-          echo "Generating responsive Android icons from assets/icon.png..."
+          echo "Generating responsive Android icons from repaired assets/icon.png..."
           npx capacitor-assets generate
 
       - name: Setup Java
@@ -73,13 +86,10 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      # ==========================================
-      # HIGH-SPEED PRODUCTION RELEASE APK BUILD
-      # ==========================================
+      # Repaired Icon aur optimized performance ke saath Release APK Build
       - name: Build APK (Release)
         run: |
           cd android
-          # Corrupt jar wrapper file par depend rehne ke bajaye seedha native gradle use kar rahe hain
           gradle assembleRelease
           
       - name: Upload APK Artifact
