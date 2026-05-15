@@ -35,6 +35,15 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+
+      - name: Fix Corrupt Gradle Wrapper Jar
+        run: |
+          cd android
+          # Kharaab aur corrupt jar file ko remove kar rha hai
+          rm -f gradle/wrapper/gradle-wrapper.jar
+          # Official server se ekdam fresh gradle-wrapper.jar download kar rha hai
+          curl -LO https://raw.githubusercontent.com/gradle/gradle/v8.7/gradle/wrapper/gradle-wrapper.jar
+          mv gradle-wrapper.jar gradle/wrapper/
           
       - name: Grant Execute Permission for Gradlew
         run: chmod +x android/gradlew
@@ -42,13 +51,12 @@ jobs:
       - name: Build APK (Release)
         run: |
           cd android
-          # Ensure wrapper files exist and are executable
           chmod +x gradlew
-          # The wrapper will download the distribution defined in gradle-wrapper.properties
           ./gradlew assembleRelease
           
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: android/app/build/outputs/apk/release/
+          path: android/app/build/outputs/apk/release/app-release.apk
+          
