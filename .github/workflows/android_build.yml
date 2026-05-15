@@ -39,15 +39,12 @@ jobs:
       - name: Grant Execute Permission for Gradlew
         run: chmod +x android/gradlew
 
-      - name: Fix Gradle Wrapper
-        run: |
-          cd android
-          rm -f gradle/wrapper/gradle-wrapper.jar
-          wget https://github.com/gradle/gradle/raw/v8.10.2/gradle/wrapper/gradle-wrapper.jar -O gradle/wrapper/gradle-wrapper.jar
-
       - name: Build APK (Release)
         run: |
           cd android
+          # Ensure wrapper files exist and are executable
+          chmod +x gradlew
+          # The wrapper will download the distribution defined in gradle-wrapper.properties
           ./gradlew assembleRelease
           
       - name: Upload APK Artifact
