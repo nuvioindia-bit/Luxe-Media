@@ -169,7 +169,8 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="relative min-h-screen">
+      {/* Mobile-Adaptive App Shell */}
+      <div className="mx-auto w-full max-w-[480px] min-h-[100dvh] flex flex-col relative overflow-hidden">
         <div className="mesh-gradient" />
         <div className="mesh-sphere top-0 left-0 bg-blue-400" />
         <div className="mesh-sphere bottom-0 right-0 bg-purple-400" />

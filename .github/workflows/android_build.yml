@@ -30,35 +30,25 @@ jobs:
       - name: Capacitor Sync
         run: npx cap sync android
 
-      # Installer crash se bachne ke liye standard size ka safe placeholder image generator
-      - name: Auto-Fix Corrupt Assets with Safe Images
-        run: |
-          echo "Generating safe standard assets..."
-          find android/app/src/main/res/ -name "ic_launcher*.png" -exec sh -c 'echo "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXUpAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfmBRUXFwAAAAAAAAGKSURBVGje7Z2xCsJAEEU3u8bGv9b/v8InWApWVmInbCIptBC00JuZ8gYWhv0m7G6S8p6ae2reU3NPzb3/O8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCqwN66As8A6v8W6MtcAecgU3+XfAAnIF7bE7AIn+U9wRsgXvs6YAnYAtscKID7oAtcI9NDjgDtsA9NifwAtwDe+z5A9wBe+DInm/AHbAHjuwFBlYg8P4P7IUlK7AQWInA6w6sWIGVwEoEXm9gxQqsBFYi8DoDK1ZgJbASgdcZWLECK4GVCBy/Y8EKLARWIvC6AytWYCWwEoHXG1ixAiuBlQi8zsCKFVgJrETgdQZWrMBKYCUCx89YsAILgZUIvO7AihVYCaxE4PUGVqzASmAlAq8zsGIFVgIrEXidgRUrsBJYicDxMxaswEJgJQLvO7BiBVYCKxF4vYEVK7ASWInA6wysWIGVwEoEXmdgxQqsBFYicPyMBSuwEFiJwOsOrFiBlcBKBF5vYMUKeAFgZ6b0PrRAtwAAAABJRU5ErkJggg==" | base64 -d > "{}"' \;
-          find android/app/src/main/res/ -name "splash*.png" -exec sh -c 'echo "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXUpAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfmBRUXFwAAAAAAAAGKSURBVGje7Z2xCsJAEEU3u8bGv9b/v8InWApWVmInbCIptBC00JuZ8gYWhv0m7G6S8p6ae2reU3NPzb3/O8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCq8AisAisAisCqwN66As8A6v8W6MtcAecgU3+XfAAnIF7bE7AIn+U9wRsgXvs6YAnYAtscKID7oAtcI9NDjgDtsA9NifwAtwDe+z5A9wBe+DInm/AHbAHjuwFBlYg8P4P7IUlK7AQWInA6w6sWIGVwEoEXm9gxQqsBFYi8DoDK1ZgJbASgdcZWLECK4GVCBy/Y8EKLARWIvC6AytWYCWwEoHXG1ixAiuBlQi8zsCKFVgJrETgdQZWrMBKYCUCx89YsAILgZUIvO7AihVYCaxE4PUGVqzASmAlAq8zsGIFVgIrEXidgRUrsBJYicDxMxaswEJgJQLvO7BiBVYCKxF4vYEVK7ASWInA6wysWIGVwEoEXmdgxQqsBFYicPyMBSuwEFiJwOsOrFiBlcBKBF5vYMUKeAFgZ6b0PrRAtwAAAABJRU5ErkJggg==" | base64 -d > "{}"' \;
-          echo "Safe placeholders injected successfully."
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
+          
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x android/gradlew
 
-      - name: Setup Gradle System (Bypass Wrapper)
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.13'
-
-      # Hamein Testing ke liye Debug APK chahiye jo auto-signed hota hai
-      - name: Build APK via Global Gradle (Debug Version)
+      - name: Build APK (Release)
         run: |
           cd android
-          gradle assembleDebug
+          # Ensure wrapper files exist and are executable
+          chmod +x gradlew
+          # The wrapper will download the distribution defined in gradle-wrapper.properties
+          ./gradlew assembleRelease
           
-      # Artifact path ko badal kar Debug APK par set kar diya hai
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          
+          name: app-release
+          path: android/app/build/outputs/apk/release/
